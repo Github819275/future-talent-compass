@@ -115,8 +115,16 @@ export const COMPETENCIES = [
   "Innovation & Emerging Technology Adoption",
   "Cross-Functional Collaboration",
 ];
+export interface CandidateInput {
+  name: string;
+  title: string;
+  color: string;
+  referenceText: string;
+}
 
-export const CANDIDATES = [
+export const CANDIDATE_COLORS = ["#60A5FA", "#34D399", "#FBBF24", "#F472B6", "#A78BFA"];
+
+export const DEFAULT_CANDIDATES: CandidateInput[] = [
   {
     name: "Heinrich Müller",
     title: "VP of Powertrain Candidate",
@@ -136,3 +144,33 @@ export const CANDIDATES = [
     referenceText: `Robert is a versatile engineering leader who has moved across multiple powertrain domains over his 16-year career — he has worked on diesel, petrol, hybrid, and most recently mild hybrid systems. He is technically solid across all of these areas without being deeply specialised in any of them. He has also spent three years in a programme management role which gave him strong cross-functional experience and good stakeholder relationships across engineering, procurement, and manufacturing. He is politically astute and well-liked. He has been following the EV transition closely and has taken several external courses on battery technology and electric drivetrain systems — he is genuinely curious and motivated to develop in this direction. He would not be the strongest technical leader on day one in either the traditional or EV domain, but he is the most well-rounded candidate in the pool and the least likely to create disruption during a transition period.`,
   },
 ];
+
+// Keep backwards compat for components that reference CANDIDATES
+export const CANDIDATES = DEFAULT_CANDIDATES;
+
+export const SUGGESTED_QUESTIONS: Record<string, string[]> = {
+  "VP of Powertrain": [
+    "Describe their experience leading powertrain engineering teams and the scale of those teams.",
+    "What is their depth of knowledge in electric vehicle powertrain systems vs. traditional ICE?",
+    "How have they managed supplier relationships, particularly during technology transitions?",
+    "Describe a situation where they navigated organisational complexity or stakeholder conflict.",
+    "What evidence is there of their ability to adopt and champion emerging technologies?",
+    "How do they approach risk management in engineering decisions?",
+  ],
+  "Head of Supply Chain": [
+    "Describe their experience restructuring supply chains during major industry shifts.",
+    "How have they managed supplier diversification and regional sourcing strategies?",
+    "What is their track record with cost optimisation without compromising quality?",
+    "How do they handle supply chain disruptions and crisis management?",
+    "Describe their experience with digital supply chain tools and data-driven decision making.",
+    "How do they balance speed-to-market with supply chain resilience?",
+  ],
+  default: [
+    "Describe their leadership style and how they manage large, complex teams.",
+    "What evidence is there of strategic thinking beyond day-to-day operations?",
+    "How have they navigated periods of significant organisational or industry change?",
+    "What is their approach to talent development and succession planning?",
+    "Describe their cross-functional collaboration experience.",
+    "What are their key technical strengths and known development areas?",
+  ],
+};

@@ -15,14 +15,9 @@ const levelColor: Record<SkillLevel, string> = {
 };
 
 const CandidateCards = ({ profiles, loading }: Props) => {
-  const data = profiles || CANDIDATES.map(c => ({
-    name: c.name,
-    title: c.title,
-    archetype: "Analyzing...",
-    archetypeDescription: "",
-    skills: [],
-    color: c.color,
-  }));
+  const data = profiles || [];
+
+  if (!profiles && !loading) return null;
 
   return (
     <motion.div

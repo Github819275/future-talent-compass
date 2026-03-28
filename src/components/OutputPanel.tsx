@@ -39,6 +39,7 @@ const OutputPanel = ({ state }: Props) => {
           <TrajectoryChart
             trajectories={state.trajectories}
             timeHorizon={state.timeHorizon}
+            candidateProfiles={state.candidateProfiles}
           />
         )}
 

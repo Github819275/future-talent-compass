@@ -8,14 +8,15 @@ import { Zap, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import {
   runForesightAgent,
-  runProfileAgent,
+  runProfileAgentCustom,
   runTrajectoryAgent,
   runDecisionAgent,
 } from "@/lib/agents";
 import type {
   Role, TimeHorizon, TransitionContext,
-  AnalysisState,
+  AnalysisState, CandidateInput,
 } from "@/lib/types";
+import { DEFAULT_CANDIDATES } from "@/lib/types";
 
 const initialState: AnalysisState = {
   role: "VP of Powertrain",
@@ -40,6 +41,7 @@ const initialState: AnalysisState = {
 
 const Index = () => {
   const [state, setState] = useState<AnalysisState>(initialState);
+  const [candidates, setCandidates] = useState<CandidateInput[]>(DEFAULT_CANDIDATES);
   const [isRunning, setIsRunning] = useState(false);
 
   const updateStatus = (agent: string, status: "idle" | "active" | "complete" | "error") => {
@@ -62,11 +64,9 @@ const Index = () => {
       updateStatus("foresight", "complete");
 
       updateStatus("profile", "active");
-      const profiles = await Promise.all([
-        runProfileAgent(0),
-        runProfileAgent(1),
-        runProfileAgent(2),
-      ]);
+      const profiles = await Promise.all(
+        candidates.map(c => runProfileAgentCustom(c))
+      );
       setState(prev => ({ ...prev, candidateProfiles: profiles, phase: 3 }));
       updateStatus("profile", "complete");
 
@@ -101,13 +101,12 @@ const Index = () => {
     } finally {
       setIsRunning(false);
     }
-  }, [state.role, state.transitionContext, state.customContext, state.timeHorizon]);
+  }, [state.role, state.transitionContext, state.customContext, state.timeHorizon, candidates]);
 
   const hasOutput = state.phase >= 2;
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border/50 bg-card/30 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -123,7 +122,7 @@ const Index = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => { setState(initialState); setIsRunning(false); }}
+              onClick={() => { setState(initialState); setCandidates(DEFAULT_CANDIDATES); setIsRunning(false); }}
               className="gap-1.5 text-xs"
             >
               <RotateCcw className="w-3 h-3" /> New Analysis
@@ -133,30 +132,27 @@ const Index = () => {
       </header>
 
       <main className="max-w-[1600px] mx-auto">
-        {/* Three-section layout */}
         <div className={`grid transition-all duration-700 ${hasOutput ? "grid-cols-[340px_1fr] min-h-[calc(100vh-57px)]" : "grid-cols-1"}`}>
-          
-          {/* ═══ INPUT PANEL (always visible) ═══ */}
           <div className={`border-r border-border/30 ${hasOutput ? "overflow-y-auto max-h-[calc(100vh-57px)] scrollbar-thin" : ""}`}>
             <InputPanel
               role={state.role}
               timeHorizon={state.timeHorizon}
               transitionContext={state.transitionContext}
               customContext={state.customContext}
+              candidates={candidates}
               onRoleChange={r => setState(prev => ({ ...prev, role: r }))}
               onHorizonChange={h => setState(prev => ({ ...prev, timeHorizon: h }))}
               onContextChange={c => setState(prev => ({ ...prev, transitionContext: c }))}
               onCustomContextChange={c => setState(prev => ({ ...prev, customContext: c }))}
+              onCandidatesChange={setCandidates}
               onRun={runFullAnalysis}
               isRunning={isRunning}
               compact={hasOutput}
             />
           </div>
 
-          {/* ═══ PROCESS + OUTPUT PANEL ═══ */}
           {hasOutput && (
             <div className="overflow-y-auto max-h-[calc(100vh-57px)] scrollbar-thin">
-              {/* Process Bar */}
               <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border/30 px-6 py-3">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
@@ -164,8 +160,6 @@ const Index = () => {
                 </div>
                 <AgentPipeline status={state.agentStatus} />
               </div>
-
-              {/* Output */}
               <div className="px-6 py-6">
                 <OutputPanel state={state} />
               </div>
