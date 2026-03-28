@@ -1,19 +1,22 @@
 import { motion } from "framer-motion";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, ReferenceLine, ComposedChart } from "recharts";
 import { TrendingUp, TrendingDown, Activity } from "lucide-react";
-import type { CandidateTrajectory, TimeHorizon } from "@/lib/types";
-import { CANDIDATES } from "@/lib/types";
+import type { CandidateTrajectory, CandidateProfile, TimeHorizon } from "@/lib/types";
 
 interface Props {
   trajectories: CandidateTrajectory[];
   timeHorizon: TimeHorizon;
+  candidateProfiles?: CandidateProfile[] | null;
 }
 
-const TrajectoryChart = ({ trajectories, timeHorizon }: Props) => {
+const TrajectoryChart = ({ trajectories, timeHorizon, candidateProfiles }: Props) => {
   const timeLabels = ["Hiring", "Year 1", "Year 3", "Year 5"];
   const visiblePoints = timeHorizon === 1 ? 2 : timeHorizon === 3 ? 3 : 4;
 
-  // Build chart data
+  const getColor = (candidateName: string, fallback: string = "#60A5FA") => {
+    return candidateProfiles?.find(p => p.name === candidateName)?.color || fallback;
+  };
+
   const chartData = timeLabels.slice(0, visiblePoints).map((label, i) => {
     const point: Record<string, any> = { time: label };
     trajectories.forEach(t => {
@@ -26,7 +29,6 @@ const TrajectoryChart = ({ trajectories, timeHorizon }: Props) => {
     return point;
   });
 
-  // Find crossing points
   let crossingLabel = "";
   if (trajectories.length >= 2) {
     for (let i = 1; i < visiblePoints; i++) {
@@ -62,12 +64,7 @@ const TrajectoryChart = ({ trajectories, timeHorizon }: Props) => {
         <ResponsiveContainer width="100%" height={400}>
           <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 20% 18%)" />
-            <XAxis
-              dataKey="time"
-              stroke="hsl(215 20% 55%)"
-              fontSize={12}
-              fontFamily="Space Grotesk"
-            />
+            <XAxis dataKey="time" stroke="hsl(215 20% 55%)" fontSize={12} fontFamily="Space Grotesk" />
             <YAxis
               domain={[0, 100]}
               stroke="hsl(215 20% 55%)"
@@ -87,8 +84,7 @@ const TrajectoryChart = ({ trajectories, timeHorizon }: Props) => {
             />
 
             {trajectories.map((t) => {
-              const profile = profiles?.find(p => p.name === t.candidateName);
-              const color = profile?.color || "#60A5FA";
+              const color = getColor(t.candidateName);
               return (
                 <Area
                   key={`${t.candidateName}_band`}
@@ -101,16 +97,16 @@ const TrajectoryChart = ({ trajectories, timeHorizon }: Props) => {
               );
             })}
 
-            {trajectories.map((t, i) => {
-              const c = CANDIDATES[i];
+            {trajectories.map((t) => {
+              const color = getColor(t.candidateName);
               return (
                 <Line
                   key={t.candidateName}
                   type="monotone"
                   dataKey={t.candidateName}
-                  stroke={c?.color || "#60A5FA"}
+                  stroke={color}
                   strokeWidth={3}
-                  dot={{ r: 5, fill: c?.color || "#60A5FA", strokeWidth: 2, stroke: "hsl(220 25% 10%)" }}
+                  dot={{ r: 5, fill: color, strokeWidth: 2, stroke: "hsl(220 25% 10%)" }}
                   activeDot={{ r: 7 }}
                 />
               );
@@ -132,9 +128,9 @@ const TrajectoryChart = ({ trajectories, timeHorizon }: Props) => {
         </ResponsiveContainer>
 
         <div className="flex items-center justify-center gap-6 mt-4">
-          {trajectories.map((t, i) => (
+          {trajectories.map((t) => (
             <div key={t.candidateName} className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: CANDIDATES[i]?.color }} />
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getColor(t.candidateName) }} />
               <span className="text-xs text-foreground">{t.candidateName}</span>
             </div>
           ))}
@@ -142,10 +138,10 @@ const TrajectoryChart = ({ trajectories, timeHorizon }: Props) => {
       </div>
 
       {/* Skill breakdown */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {trajectories.map((t, i) => (
+      <div className={`grid grid-cols-1 ${trajectories.length <= 3 ? "md:grid-cols-3" : "md:grid-cols-2 lg:grid-cols-3"} gap-4`}>
+        {trajectories.map((t) => (
           <div key={t.candidateName} className="glass-card p-4 space-y-3">
-            <h4 className="text-sm font-display font-semibold" style={{ color: CANDIDATES[i]?.color }}>
+            <h4 className="text-sm font-display font-semibold" style={{ color: getColor(t.candidateName) }}>
               {t.candidateName}
             </h4>
             {t.appreciatingSkills.length > 0 && (
