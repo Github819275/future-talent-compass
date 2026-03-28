@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { CandidateProfile, SkillLevel } from "@/lib/types";
 
 interface Props {
@@ -102,6 +103,29 @@ const CandidateCards = ({ profiles, loading }: Props) => {
   );
 };
 
+function ScoreBreakdown({ candidate }: { candidate: CandidateProfile }) {
+  const sorted = [...candidate.skills].sort(
+    (a, b) => levelWeight[b.level] * b.confidence - levelWeight[a.level] * a.confidence
+  );
+  return (
+    <div className="space-y-1.5 max-h-60 overflow-y-auto">
+      <p className="text-xs font-semibold text-popover-foreground mb-1">Score Breakdown</p>
+      {sorted.map((s) => {
+        const contrib = Math.round(levelWeight[s.level] * s.confidence * 100);
+        return (
+          <div key={s.competency} className="flex items-center justify-between gap-3 text-xs">
+            <span className="truncate text-popover-foreground/80">{s.competency}</span>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <span className={`px-1 py-0.5 rounded text-[10px] border ${levelColor[s.level]}`}>{s.level}</span>
+              <span className="font-mono font-medium text-popover-foreground w-6 text-right">{contrib}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function CandidateCard({ candidate, score, index, rank }: { candidate: CandidateProfile; score: number; index: number; rank: number }) {
   return (
     <motion.div
@@ -127,10 +151,19 @@ function CandidateCard({ candidate, score, index, rank }: { candidate: Candidate
           <h3 className="font-display font-semibold text-foreground">{candidate.name}</h3>
           <p className="text-xs text-muted-foreground">{candidate.title}</p>
         </div>
-        <div className="text-right flex-shrink-0">
-          <div className="text-lg font-bold text-foreground">{score}</div>
-          <div className="text-[10px] text-muted-foreground">Score</div>
-        </div>
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="text-right flex-shrink-0 cursor-help">
+                <div className="text-lg font-bold text-foreground">{score}</div>
+                <div className="text-[10px] text-muted-foreground underline decoration-dotted">Score</div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="w-72 p-3">
+              <ScoreBreakdown candidate={candidate} />
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       <div className="px-3 py-2 rounded-lg bg-primary/5 border border-primary/10">
