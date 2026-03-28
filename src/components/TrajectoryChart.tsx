@@ -41,7 +41,7 @@ const TrajectoryChart = ({ trajectories, timeHorizon, candidateProfiles }: Props
 
   let crossingLabel = "";
   if (trajectories.length >= 2) {
-    for (let i = 1; i < visiblePoints; i++) {
+    for (let i = 1; i < timeLabels.length; i++) {
       const a = trajectories[0]?.points[i]?.score;
       const b = trajectories[1]?.points[i]?.score;
       const aPrev = trajectories[0]?.points[i-1]?.score;
