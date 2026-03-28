@@ -48,7 +48,6 @@ const InputPage = () => {
   };
 
   const addCandidate = () => {
-    if (candidates.length >= 5) return;
     const color = CANDIDATE_COLORS[candidates.length % CANDIDATE_COLORS.length];
     setCandidates([...candidates, { name: "", title: "CEO Candidate", color, referenceText: "" }]);
   };
@@ -72,7 +71,7 @@ const InputPage = () => {
         const textIdx = header.findIndex(h => h.includes("reference") || h.includes("text") || h.includes("cv") || h.includes("notes") || h.includes("description"));
         if (nameIdx === -1 || textIdx === -1) { toast.error("CSV needs 'name' and 'referenceText' columns."); return; }
         const imported: CandidateInput[] = [];
-        for (let i = 1; i < lines.length && imported.length < 5; i++) {
+        for (let i = 1; i < lines.length; i++) {
           const cols = lines[i].split(",");
           const name = cols[nameIdx]?.replace(/^["']|["']$/g, "").trim();
           const refText = cols[textIdx]?.replace(/^["']|["']$/g, "").trim();
@@ -222,11 +221,9 @@ const InputPage = () => {
             ))}
 
             <div className="flex gap-3">
-              {candidates.length < 5 && (
-                <button onClick={addCandidate} className="flex-1 py-3 border border-dashed border-border/50 rounded-lg text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2">
-                  <Plus className="w-4 h-4" /> Add Candidate
-                </button>
-              )}
+              <button onClick={addCandidate} className="flex-1 py-3 border border-dashed border-border/50 rounded-lg text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2">
+                <Plus className="w-4 h-4" /> Add Candidate
+              </button>
               <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-3 border border-dashed border-border/50 rounded-lg text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2">
                 <Upload className="w-4 h-4" /> Import CSV
               </button>
