@@ -113,12 +113,13 @@ const InputPage = () => {
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               Hire for the leader your organisation will need — not just the one it needs today.
             </p>
-            <button
+            <Button
+              variant="outline"
               onClick={() => navigate("/dashboard")}
-              className="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+              className="mt-6 gap-2 text-sm px-6 py-5 border-primary/30 text-primary hover:bg-primary/5"
             >
               <Settings className="w-4 h-4" /> Customize Roles & Evaluation Categories
-            </button>
+            </Button>
           </motion.div>
         </div>
       </div>
