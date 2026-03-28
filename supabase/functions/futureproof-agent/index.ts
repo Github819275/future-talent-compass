@@ -28,7 +28,23 @@ You must return a JSON object with this exact structure:
   ]
 }
 
-Scores represent importance of that competency at that time point. Be specific and realistic. Consider the actual industry dynamics.`,
+CRITICAL SCORING RULES - READ CAREFULLY:
+- Scores represent the IMPORTANCE of that competency to the role at that time point (0=irrelevant, 100=absolutely critical).
+- You MUST produce a WIDE RANGE of scores. NOT everything is important. Some competencies MUST score low (10-30).
+- Traditional/legacy skills should START high (70-90) and DROP sharply over the time horizon (to 15-35) if there is a technology transition.
+- Emerging/future skills should START low (15-40) and RISE sharply (to 75-95).
+- Soft skills like leadership and stakeholder management should be MODERATE and STABLE (45-65).
+- At least 2-3 competencies MUST be "depreciating" with scores that clearly decline.
+- At least 2-3 competencies MUST be "appreciating" with scores that clearly increase.
+- The AVERAGE score across all competencies at any time point should be around 45-55, NOT 70+.
+- DO NOT give everything high scores. That tells the user nothing. The whole point is to show CONTRAST between appreciating and depreciating competencies.
+
+Example of GOOD score variety for an EV transition:
+- ICE Expertise: hiring=82, year1=70, year3=40, year5=18 (depreciating)
+- Battery Knowledge: hiring=25, year1=45, year3=78, year5=92 (appreciating)
+- Large Team Leadership: hiring=55, year1=55, year3=50, year5=50 (stable)
+
+Be specific and realistic. Consider the actual industry dynamics.`,
 
       profile: `You are the Profile Agent for a strategic hiring tool. You read candidate reference text and infer their skill profile.
 
@@ -38,7 +54,7 @@ You must return a JSON object with this exact structure:
   "archetypeDescription": "string - 2-3 sentences about their likely trajectory",
   "skills": [
     {
-      "competency": "string - must be one of the 12 standard competencies",
+      "competency": "string - must be one of the provided competencies",
       "level": "Core" | "Developed" | "Emerging",
       "confidence": number 0-1,
       "reasoning": "string - what in the text signalled this"
@@ -46,11 +62,13 @@ You must return a JSON object with this exact structure:
   ]
 }
 
-The 12 competencies are: Internal Combustion Engine Expertise, Battery & Electrochemistry Knowledge, Power Electronics & Electric Motor Design, Thermal Management Systems, Software Integration & Control Systems, Supplier Relationship Management, Large Team Leadership, Stakeholder Management in Complex Organisations, Programme & Programme Management, Risk Management & Regulatory Compliance, Innovation & Emerging Technology Adoption, Cross-Functional Collaboration.`,
+The competencies to evaluate against are provided in the payload. Evaluate EVERY competency. If the candidate has no evidence of a skill, mark it as "Emerging" with low confidence. Be honest about gaps.`,
 
       trajectory: `You are the Trajectory Agent. Given industry foresight data and a candidate's skill profile, calculate their fit score at each time point.
 
 Core skills count 1.0x, Developed 0.7x, Emerging 0.4x. Match candidate skills against competency importance at each time point. Also generate optimistic (+10-15%) and pessimistic (-10-15%) scenarios.
+
+IMPORTANT: Scores should reflect REAL differences between candidates. A legacy expert should score HIGH at hiring but DROP over time. A future-native should score LOWER at hiring but RISE. Make the trajectories cross if appropriate.
 
 Return JSON:
 {
@@ -138,10 +156,8 @@ Return JSON:
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || "";
 
-    // Try to parse JSON from the response
     let parsed;
     try {
-      // Try to extract JSON from markdown code blocks or direct JSON
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
       parsed = JSON.parse(jsonMatch[1].trim());
     } catch {
