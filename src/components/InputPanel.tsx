@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
@@ -11,8 +11,9 @@ import {
 } from "@/lib/types";
 import {
   ArrowRight, Loader2, Settings, FileText, Plus, Trash2,
-  HelpCircle, ChevronDown, ChevronUp, Wand2,
+  HelpCircle, ChevronDown, ChevronUp, Wand2, Upload,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Props {
   role: Role;
