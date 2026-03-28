@@ -1,6 +1,7 @@
 import type {
   Role, TimeHorizon, TransitionContext,
   CompetencyForecast, CandidateProfile, CandidateTrajectory, Recommendation,
+  CandidateInput,
 } from "@/lib/types";
 import { CANDIDATES, COMPETENCIES } from "@/lib/types";
 
