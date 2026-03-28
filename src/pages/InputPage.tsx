@@ -35,7 +35,7 @@ const InputPage = () => {
       transitionContext: "Full EV Transition" as TransitionContext,
       customContext: companySituation,
       companySituation,
-      cSuiteContext,
+      cSuiteContext: "",
       candidates,
     }));
     navigate("/analysis");
