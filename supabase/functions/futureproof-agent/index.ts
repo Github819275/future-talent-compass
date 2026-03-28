@@ -109,7 +109,7 @@ Return JSON:
       "developmentPlan": "specific development plan"
     }
   ],
-  "devilsAdvocate": "strongest argument against the primary recommendation",
+  "devilsAdvocate": "A clear, definitive 2-sentence final verdict. First sentence: state the single best hiring decision and why. Second sentence: state the critical condition or risk to watch.",
   "keyInsight": "one sentence capturing the most important non-obvious finding"
 }`
     };
