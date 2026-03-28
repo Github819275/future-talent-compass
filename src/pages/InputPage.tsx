@@ -25,9 +25,6 @@ const InputPage = () => {
   const [role, setRole] = useState<Role>("Chief Executive Officer");
   const [timeHorizon, setTimeHorizon] = useState<TimeHorizon>(5);
   const [candidates, setCandidates] = useState<CandidateInput[]>(DEFAULT_CANDIDATES);
-  const [cSuiteContext, setCsuiteContext] = useState(
-    "Current C-Suite: CFO (conservative, cost-focused, 20 years at BMW), COO (strong operations leader, manufacturing background, open to change), Chief Engineer (deep ICE expertise, sceptical of rapid EV transition), Chief Commercial Officer (digital-savvy, pushing for direct-to-consumer), Head of HR (focused on cultural transformation and talent retention)"
-  );
 
   const canRun = candidates.length >= 2 && candidates.every(c => c.name.trim() && c.referenceText.trim().length > 20);
 
