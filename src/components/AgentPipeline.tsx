@@ -14,32 +14,32 @@ const AGENTS = [
 
 const AgentPipeline = ({ status }: AgentPipelineProps) => {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1.5">
       {AGENTS.map((agent, i) => (
-        <div key={agent.key} className="flex items-center gap-1 flex-1">
+        <div key={agent.key} className="flex items-center gap-1.5 flex-1">
           <div className="flex items-center gap-1.5 flex-1">
             <div className={`
-              w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-500
-              ${status[agent.key] === "complete" ? "bg-teal/20 border border-teal" : ""}
-              ${status[agent.key] === "active" ? "bg-primary/20 border border-primary animate-pulse" : ""}
-              ${status[agent.key] === "idle" ? "bg-muted/50 border border-border/50" : ""}
-              ${status[agent.key] === "error" ? "bg-danger/20 border border-danger" : ""}
+              w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-500
+              ${status[agent.key] === "complete" ? "bg-emerald-100 border border-emerald-300" : ""}
+              ${status[agent.key] === "active" ? "bg-primary/10 border border-primary/30 animate-pulse" : ""}
+              ${status[agent.key] === "idle" ? "bg-muted border border-border" : ""}
+              ${status[agent.key] === "error" ? "bg-red-100 border border-red-300" : ""}
             `}>
-              {status[agent.key] === "complete" && <Check className="w-3 h-3 text-teal" />}
-              {status[agent.key] === "active" && <Loader2 className="w-3 h-3 text-primary animate-spin" />}
+              {status[agent.key] === "complete" && <Check className="w-3.5 h-3.5 text-emerald-600" />}
+              {status[agent.key] === "active" && <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />}
               {status[agent.key] === "idle" && <Circle className="w-2 h-2 text-muted-foreground/40" />}
-              {status[agent.key] === "error" && <AlertCircle className="w-3 h-3 text-danger" />}
+              {status[agent.key] === "error" && <AlertCircle className="w-3.5 h-3.5 text-red-500" />}
             </div>
-            <span className={`text-[10px] font-medium whitespace-nowrap ${
+            <span className={`text-[11px] font-medium whitespace-nowrap ${
               status[agent.key] === "active" ? "text-primary" :
-              status[agent.key] === "complete" ? "text-teal" : "text-muted-foreground/60"
+              status[agent.key] === "complete" ? "text-emerald-600" : "text-muted-foreground"
             }`}>
               {agent.label}
             </span>
           </div>
           {i < AGENTS.length - 1 && (
-            <div className={`h-px flex-shrink-0 w-4 transition-colors duration-500 ${
-              status[agent.key] === "complete" ? "bg-teal/40" : "bg-border/30"
+            <div className={`h-px flex-shrink-0 w-6 transition-colors duration-500 ${
+              status[agent.key] === "complete" ? "bg-emerald-300" : "bg-border"
             }`} />
           )}
         </div>
