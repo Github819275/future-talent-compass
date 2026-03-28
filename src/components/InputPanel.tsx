@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
@@ -11,8 +11,9 @@ import {
 } from "@/lib/types";
 import {
   ArrowRight, Loader2, Settings, FileText, Plus, Trash2,
-  HelpCircle, ChevronDown, ChevronUp, Wand2,
+  HelpCircle, ChevronDown, ChevronUp, Wand2, Upload,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Props {
   role: Role;
@@ -52,6 +53,8 @@ const InputPanel = ({
     onCandidatesChange(updated);
   };
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const addCandidate = () => {
     if (candidates.length >= 5) return;
     const color = CANDIDATE_COLORS[candidates.length % CANDIDATE_COLORS.length];
@@ -64,6 +67,79 @@ const InputPanel = ({
   const removeCandidate = (index: number) => {
     if (candidates.length <= 2) return;
     onCandidatesChange(candidates.filter((_, i) => i !== index));
+  };
+
+  const handleCsvImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const text = ev.target?.result as string;
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) {
+          toast.error("CSV must have a header row and at least one data row.");
+          return;
+        }
+        const header = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/['"]/g, ""));
+        const nameIdx = header.findIndex(h => h === "name");
+        const titleIdx = header.findIndex(h => h === "title" || h === "role" || h === "position");
+        const textIdx = header.findIndex(h => h.includes("reference") || h.includes("text") || h.includes("cv") || h.includes("notes") || h.includes("description"));
+
+        if (nameIdx === -1 || textIdx === -1) {
+          toast.error("CSV must have 'name' and 'referenceText' (or 'reference', 'cv', 'notes', 'description') columns.", { duration: 5000 });
+          return;
+        }
+
+        const parseCsvLine = (line: string): string[] => {
+          const result: string[] = [];
+          let current = "";
+          let inQuotes = false;
+          for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (ch === '"') {
+              if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+              else inQuotes = !inQuotes;
+            } else if (ch === "," && !inQuotes) {
+              result.push(current.trim());
+              current = "";
+            } else {
+              current += ch;
+            }
+          }
+          result.push(current.trim());
+          return result;
+        };
+
+        const imported: CandidateInput[] = [];
+        for (let i = 1; i < lines.length && imported.length < 5; i++) {
+          const cols = parseCsvLine(lines[i]);
+          const name = cols[nameIdx]?.replace(/^["']|["']$/g, "").trim();
+          const refText = cols[textIdx]?.replace(/^["']|["']$/g, "").trim();
+          if (!name || !refText) continue;
+          const title = titleIdx >= 0 ? cols[titleIdx]?.replace(/^["']|["']$/g, "").trim() : `${role} Candidate`;
+          imported.push({
+            name,
+            title: title || `${role} Candidate`,
+            color: CANDIDATE_COLORS[imported.length % CANDIDATE_COLORS.length],
+            referenceText: refText,
+          });
+        }
+
+        if (imported.length === 0) {
+          toast.error("No valid candidates found in CSV.");
+          return;
+        }
+
+        onCandidatesChange(imported);
+        toast.success(`Imported ${imported.length} candidate${imported.length > 1 ? "s" : ""} from CSV`);
+      } catch {
+        toast.error("Failed to parse CSV file.");
+      }
+    };
+    reader.readAsText(file);
+    // Reset so the same file can be re-imported
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const canRun = candidates.length >= 2 && candidates.every(c => c.name.trim() && c.referenceText.trim().length > 20);
@@ -330,14 +406,29 @@ const InputPanel = ({
             </motion.div>
           ))}
 
-          {candidates.length < 5 && (
+          <div className="flex gap-3">
+            {candidates.length < 5 && (
+              <button
+                onClick={addCandidate}
+                className="flex-1 py-3 border border-dashed border-border/50 rounded-lg text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> Add Candidate
+              </button>
+            )}
             <button
-              onClick={addCandidate}
-              className="w-full py-3 border border-dashed border-border/50 rounded-lg text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 py-3 border border-dashed border-border/50 rounded-lg text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2"
             >
-              <Plus className="w-4 h-4" /> Add Candidate
+              <Upload className="w-4 h-4" /> Import from CSV
             </button>
-          )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleCsvImport}
+              className="hidden"
+            />
+          </div>
         </div>
       </div>
 
