@@ -11,7 +11,6 @@ import {
   runProfileAgentCustom,
   runTrajectoryAgent,
   runDecisionAgent,
-  runTeamCompatibilityAgent,
 } from "@/lib/agents";
 import type {
   Role, TimeHorizon, TransitionContext,
@@ -87,18 +86,10 @@ const AnalysisPage = () => {
       setState(prev => ({ ...prev, trajectories }));
       updateStatus("trajectory", "complete");
 
-      // Step 4: Risk Agent (+ Team Compatibility)
+      // Step 4: Risk Agent
       updateStatus("risk", "active");
       await delay(1500);
-      let teamPairings = null;
-      if (cSuiteContext) {
-        try {
-          teamPairings = await runTeamCompatibilityAgent(profiles, cSuiteContext);
-        } catch (e) {
-          console.warn("Team compatibility agent failed:", e);
-        }
-      }
-      setState(prev => ({ ...prev, teamPairings, phase: 4 }));
+      setState(prev => ({ ...prev, phase: 4 }));
       updateStatus("risk", "complete");
 
       // Step 5: Decision Agent
