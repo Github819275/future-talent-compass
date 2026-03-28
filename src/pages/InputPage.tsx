@@ -238,19 +238,6 @@ const InputPage = () => {
           </div>
         </section>
 
-        {/* C-Suite Context */}
-        <section className="glass-card p-6 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center text-xs font-bold text-primary">4</div>
-            <h2 className="text-sm font-display font-semibold text-foreground uppercase tracking-wider">Existing C-Suite Context</h2>
-          </div>
-          <Textarea
-            value={cSuiteContext}
-            onChange={e => setCsuiteContext(e.target.value)}
-            placeholder="Describe the existing leadership team, their strengths, weaknesses, and dynamics..."
-            className="bg-muted/30 border-border/40 min-h-[100px] text-sm leading-relaxed"
-          />
-        </section>
 
         {/* Run Button */}
         <div className="flex flex-col items-center gap-3 pt-4">
