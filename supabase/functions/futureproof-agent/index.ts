@@ -1,20 +1,21 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+      },
+    });
+  }
 
-  try {
-    const { agentType, payload } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+  const { agentType, payload } = await req.json();
 
-    const systemPrompts: Record<string, string> = {
-      foresight: `You are the Industry Foresight Agent for a strategic hiring tool. You analyze how competency requirements for a specific role will evolve over time given industry transitions.
+  const systemPrompts: Record<string, string> = {
+    foresight: `You are the Industry Foresight Agent for a strategic C-suite hiring tool. You analyze how competency requirements for a specific role will evolve over time given industry transitions.
 
 The payload includes a "timeHorizon" (1, 3, or 5 years). You must produce scores at 6-month intervals from hiring up to the horizon.
 
@@ -41,25 +42,25 @@ CRITICAL SCORING RULES:
 - At least 2-3 competencies MUST be "depreciating", at least 2-3 "appreciating".
 - Average across all competencies at any time point should be ~45-55, NOT 70+.`,
 
-      profile: `You are the Profile Agent for a strategic hiring tool. You read candidate reference text and infer their skill profile.
+    profile: `You are the Candidate Profiling Agent. Given a candidate's name and reference text, extract their competency profile.
 
-You must return a JSON object with this exact structure:
+Return JSON:
 {
-  "archetype": "string - e.g. 'The Legacy Expert', 'The Transition Specialist', 'The Future-Native', 'The Generalist Adapter'",
-  "archetypeDescription": "string - 2-3 sentences about their likely trajectory",
+  "archetype": "a 2-4 word archetype label (e.g. 'Legacy Domain Expert', 'Transformation Native', 'Strategic Bridge Builder')",
+  "archetypeDescription": "1-2 sentences describing this archetype",
   "skills": [
     {
-      "competency": "string - must be one of the provided competencies",
+      "competency": "must match one of the provided competency names exactly",
       "level": "Core" | "Developed" | "Emerging",
-      "confidence": number 0-1,
-      "reasoning": "string - what in the text signalled this"
+      "confidence": 0.0 to 1.0,
+      "reasoning": "1 sentence evidence from the reference text"
     }
   ]
 }
 
-The competencies to evaluate against are provided in the payload. Evaluate EVERY competency. If the candidate has no evidence of a skill, mark it as "Emerging" with low confidence. Be honest about gaps.`,
+Be honest about weaknesses. If the reference text shows no evidence for a competency, rate it as "Emerging" with low confidence. Every candidate must have at least 2-3 "Emerging" competencies.`,
 
-      trajectory: `You are the Trajectory Agent. Given industry foresight data and a candidate's skill profile, calculate their fit score at EVERY time point provided in the foresight data (6-month intervals).
+    trajectory: `You are the Trajectory Agent. Given industry foresight data and a candidate's skill profile, calculate their fit score at EVERY time point provided in the foresight data (6-month intervals).
 
 Core skills count 1.0x, Developed 0.7x, Emerging 0.4x. Match candidate skills against competency importance at each time point. Also generate optimistic (+10-15%) and pessimistic (-10-15%) scenarios.
 
@@ -80,11 +81,10 @@ Return JSON:
 
 IMPORTANT: You MUST produce a "points" entry for EVERY 6-month interval that appears in the foresight scores. Match the time labels exactly.`,
 
-      risk: `You are the Risk Agent. Analyze trajectory data and produce optimistic/pessimistic bounds. Already handled by trajectory agent. Confirm and refine the bounds.
-
+    risk: `You are the Risk Analysis Agent. Given a candidate's trajectory data, identify key risks and validate the confidence bands.
 Return the same trajectory format with refined confidence bands.`,
 
-      decision: `You are the Decision Agent. Given all trajectory data for all candidates, produce conditional recommendations.
+    decision: `You are the Decision Agent. Given all trajectory data for all candidates, produce conditional recommendations.
 
 Return JSON:
 {
@@ -110,65 +110,88 @@ Return JSON:
     }
   ],
   "devilsAdvocate": "A clear, definitive 2-sentence final verdict. First sentence: state the single best hiring decision and why. Second sentence: state the critical condition or risk to watch.",
-  "keyInsight": "one sentence capturing the most important non-obvious finding"
-}`
-    };
-
-    const systemPrompt = systemPrompts[agentType];
-    if (!systemPrompt) throw new Error(`Unknown agent type: ${agentType}`);
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: JSON.stringify(payload) },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limited. Please try again shortly." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required. Please add credits." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const text = await response.text();
-      console.error("AI gateway error:", response.status, text);
-      throw new Error(`AI gateway error: ${response.status}`);
+  "keyInsight": "one sentence capturing the most important non-obvious finding",
+  "agentReasoning": [
+    {
+      "agentName": "Context Agent",
+      "conclusion": "1-2 sentences on what was concluded about the organisational context",
+      "keyFactors": ["factor 1", "factor 2", "factor 3"]
+    },
+    {
+      "agentName": "Candidate Agent",
+      "conclusion": "1-2 sentences on key differentiators between candidates",
+      "keyFactors": ["factor 1", "factor 2", "factor 3"]
+    },
+    {
+      "agentName": "Foresight Agent",
+      "conclusion": "1-2 sentences on the most important competency shifts",
+      "keyFactors": ["factor 1", "factor 2", "factor 3"]
+    },
+    {
+      "agentName": "Decision Agent",
+      "conclusion": "1-2 sentences on why the final recommendation was made",
+      "keyFactors": ["factor 1", "factor 2", "factor 3"]
     }
+  ]
+}`,
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "";
+    teamCompatibility: `You are the Team Compatibility Agent. Given candidate profiles and the existing C-Suite context, analyze how each candidate would pair with each existing C-suite member.
 
-    let parsed;
-    try {
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
-      parsed = JSON.parse(jsonMatch[1].trim());
-    } catch {
-      parsed = { raw: content };
+Return JSON:
+{
+  "pairings": [
+    {
+      "candidate": "candidate name",
+      "cSuiteMember": "C-suite member name or title",
+      "cSuiteRole": "their role",
+      "compatibility": "strong" | "risk",
+      "reasoning": "One sentence explaining the pairing dynamic — be specific about WHY it works or doesn't"
     }
+  ]
+}
 
-    return new Response(JSON.stringify(parsed), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (e) {
-    console.error("Agent error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+Generate 2-3 pairings per candidate. Mix of strong and risk pairings. Be specific and insightful — explain the dynamic, not just "good fit" or "bad fit". Example: "Visionary CEO + operational COO — classic transformation pairing that provides execution backbone" or "Both legacy-oriented — creates transformation gap risk with no one championing the new paradigm".`
+  };
+
+  const systemPrompt = systemPrompts[agentType];
+  if (!systemPrompt) throw new Error(`Unknown agent type: ${agentType}`);
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: JSON.stringify(payload) },
+      ],
+      temperature: 0.7,
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    return new Response(JSON.stringify({ error: err }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
     });
   }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+
+  let parsed;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    parsed = { raw: content };
+  }
+
+  return new Response(JSON.stringify(parsed), {
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+  });
 });

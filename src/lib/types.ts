@@ -1,12 +1,12 @@
 export type Role = 
-  | "VP of Powertrain"
-  | "Head of Supply Chain"
+  | "Chief Executive Officer"
+  | "Chief Operating Officer"
+  | "Chief Technology Officer"
+  | "Chief Financial Officer"
   | "Chief Commercial Officer"
   | "VP of Engineering"
-  | "Head of Manufacturing"
-  | "Regional Director"
-  | "Chief Procurement Officer"
-  | "Head of Product Development";
+  | "Head of Strategy"
+  | "Head of Transformation";
 
 export type TimeHorizon = 1 | 3 | 5;
 
@@ -66,11 +66,27 @@ export interface Recommendation {
   developmentPlan?: string;
 }
 
+export interface TeamPairing {
+  candidate: string;
+  cSuiteMember: string;
+  cSuiteRole: string;
+  compatibility: "strong" | "risk";
+  reasoning: string;
+}
+
+export interface AgentReasoning {
+  agentName: string;
+  conclusion: string;
+  keyFactors: string[];
+}
+
 export interface AnalysisState {
   role: Role;
   timeHorizon: TimeHorizon;
   transitionContext: TransitionContext;
   customContext: string;
+  companySituation: string;
+  cSuiteContext: string;
   phase: number;
   industryForesight: CompetencyForecast[] | null;
   candidateProfiles: CandidateProfile[] | null;
@@ -78,18 +94,20 @@ export interface AnalysisState {
   recommendations: Recommendation[] | null;
   devilsAdvocate: string | null;
   keyInsight: string | null;
+  teamPairings: TeamPairing[] | null;
+  agentReasoning: AgentReasoning[] | null;
   agentStatus: Record<string, "idle" | "active" | "complete" | "error">;
 }
 
 export const ROLES: Role[] = [
-  "VP of Powertrain",
-  "Head of Supply Chain",
+  "Chief Executive Officer",
+  "Chief Operating Officer",
+  "Chief Technology Officer",
+  "Chief Financial Officer",
   "Chief Commercial Officer",
   "VP of Engineering",
-  "Head of Manufacturing",
-  "Regional Director",
-  "Chief Procurement Officer",
-  "Head of Product Development",
+  "Head of Strategy",
+  "Head of Transformation",
 ];
 
 export const TRANSITION_CONTEXTS: TransitionContext[] = [
@@ -102,19 +120,20 @@ export const TRANSITION_CONTEXTS: TransitionContext[] = [
 ];
 
 export const COMPETENCIES = [
-  "Internal Combustion Engine Expertise",
-  "Battery & Electrochemistry Knowledge",
-  "Power Electronics & Electric Motor Design",
-  "Thermal Management Systems",
-  "Software Integration & Control Systems",
-  "Supplier Relationship Management",
-  "Large Team Leadership",
-  "Stakeholder Management in Complex Organisations",
-  "Programme & Programme Management",
-  "Risk Management & Regulatory Compliance",
+  "Strategic Vision & Industry Foresight",
+  "Transformation & Change Leadership",
+  "Electric Vehicle & New Technology Expertise",
+  "Financial Acumen & Capital Allocation",
+  "Stakeholder Management & Board Relations",
+  "Large Organisation Leadership",
   "Innovation & Emerging Technology Adoption",
+  "Talent Development & Culture Building",
+  "Crisis Management & Risk Mitigation",
+  "Global Market Understanding",
+  "Regulatory & Policy Navigation",
   "Cross-Functional Collaboration",
 ];
+
 export interface CandidateInput {
   name: string;
   title: string;
@@ -126,44 +145,35 @@ export const CANDIDATE_COLORS = ["#60A5FA", "#34D399", "#FBBF24", "#F472B6", "#A
 
 export const DEFAULT_CANDIDATES: CandidateInput[] = [
   {
-    name: "Heinrich Müller",
-    title: "VP of Powertrain Candidate",
+    name: "Klaus Mueller",
+    title: "CEO Candidate",
     color: "#60A5FA",
-    referenceText: `Heinrich is one of the most experienced powertrain executives I have encountered in three decades in the automotive industry. He has spent 22 years mastering internal combustion engine development, leading teams that have delivered some of the most efficient and reliable petrol and diesel powertrains in the segment. His technical depth is extraordinary — there is no combustion engineering problem he has not seen and solved. He manages large, complex engineering teams with authority and discipline. His supplier relationships in the traditional powertrain supply base are second to none. He is methodical, thorough, and highly risk-averse, which has served him exceptionally well in an environment where reliability is paramount. He has begun engaging with electrification topics in the last two years but it is not yet an area where he has demonstrated depth — he describes it as the next chapter he is preparing for rather than one he has written.`,
+    referenceText: `Klaus Mueller is one of the most experienced automotive executives in Europe. He has spent 25 years rising through the ranks of BMW's powertrain and manufacturing divisions, ultimately serving as SVP of Global Manufacturing Operations. His deep expertise is in internal combustion engine production, lean manufacturing, and large-scale operational excellence. He managed over 15,000 employees across 6 plants and delivered consistent margin improvement year-on-year. His relationships with Tier 1 suppliers are legendary — he personally negotiated BMW's largest ever powertrain supply contracts. He is methodical, deeply respected by the board, and embodies the traditional BMW engineering culture. His weakness is that his entire career has been built in the ICE paradigm — he has begun engaging with electrification strategy in the last 18 months but his understanding of software-defined vehicles, battery chemistry, and direct-to-consumer models remains surface-level. He describes himself as "a fast learner" but his references note he is most comfortable in environments he already deeply understands.`,
   },
   {
-    name: "Yuki Tanaka",
-    title: "VP of Powertrain Candidate",
+    name: "Sara Lindqvist",
+    title: "CEO Candidate",
     color: "#34D399",
-    referenceText: `Yuki is not a conventional powertrain candidate but I believe she is exactly the kind of leader the industry needs right now. She has 11 years of experience, the last six of which have been spent building and leading the powertrain engineering function at an EV-native startup that was acquired by a major OEM last year. She has deep expertise in battery integration, electric motor design, power electronics, and thermal management systems. She thinks natively in software — she understands how control systems and physical hardware interact in ways that most mechanical engineers her age do not. She is fast-moving and comfortable with ambiguity. Her weakness is that she has only ever worked in flat, startup-style organisations — she has not yet managed the scale and complexity of a traditional automotive engineering hierarchy, and her stakeholder management skills in large corporate environments are untested. She has enormous potential but she will need support in the first 12 to 18 months navigating the organisational complexity.`,
+    referenceText: `Sara Lindqvist is a transformational leader who has spent the last 8 years leading the European expansion of a major EV-native manufacturer. As their Chief Operating Officer, she built the operational infrastructure from 200 to 4,500 employees, launched 3 gigafactory partnerships, and led the company through a successful IPO. Before that, she spent 6 years at a major strategy consultancy specialising in automotive transformation. She thinks natively in software and electrification — she understands battery supply chains, software-defined vehicle architectures, over-the-air update strategies, and direct-to-consumer sales models at a deep operational level. She is visionary, fast-moving, and comfortable with ambiguity. Her weakness is that she has never led an organisation of BMW's scale and complexity — her largest direct organisation was 4,500 people vs BMW's 150,000. She also has limited experience managing legacy operations that must continue generating revenue during a transition. Board members who met her were impressed by her vision but concerned about her ability to manage the political complexity of a 100-year-old German institution.`,
   },
   {
-    name: "Robert Baumann",
-    title: "VP of Powertrain Candidate",
+    name: "Thomas Berg",
+    title: "CEO Candidate",
     color: "#FBBF24",
-    referenceText: `Robert is a versatile engineering leader who has moved across multiple powertrain domains over his 16-year career — he has worked on diesel, petrol, hybrid, and most recently mild hybrid systems. He is technically solid across all of these areas without being deeply specialised in any of them. He has also spent three years in a programme management role which gave him strong cross-functional experience and good stakeholder relationships across engineering, procurement, and manufacturing. He is politically astute and well-liked. He has been following the EV transition closely and has taken several external courses on battery technology and electric drivetrain systems — he is genuinely curious and motivated to develop in this direction. He would not be the strongest technical leader on day one in either the traditional or EV domain, but he is the most well-rounded candidate in the pool and the least likely to create disruption during a transition period.`,
+    referenceText: `Thomas Berg spent 12 years as a Senior Partner at McKinsey & Company leading their global automotive practice, where he advised 6 of the world's top 10 automakers on electrification strategy, digital transformation, and organisational restructuring. He then served as Chief Transformation Officer at a major European OEM for 4 years, where he led the company's pivot from a diesel-heavy portfolio to a hybrid-first strategy. He is exceptionally skilled at stakeholder management, board communication, and building consensus across competing factions. He understands both the legacy business and the future state intellectually, though his hands-on operational experience is thinner than either Klaus or Sara. He has never run a P&L of BMW's scale. His references describe him as "the smartest person in the room who can get everyone aligned" but also note that his consulting background sometimes shows — he can be perceived as more comfortable with frameworks than with making irreversible operational decisions under pressure. He is the lowest-risk candidate politically but the question is whether BMW needs a diplomat or a revolutionary.`,
   },
 ];
 
-// Keep backwards compat for components that reference CANDIDATES
 export const CANDIDATES = DEFAULT_CANDIDATES;
 
 export const SUGGESTED_QUESTIONS: Record<string, string[]> = {
-  "VP of Powertrain": [
-    "Describe their experience leading powertrain engineering teams and the scale of those teams.",
-    "What is their depth of knowledge in electric vehicle powertrain systems vs. traditional ICE?",
-    "How have they managed supplier relationships, particularly during technology transitions?",
-    "Describe a situation where they navigated organisational complexity or stakeholder conflict.",
-    "What evidence is there of their ability to adopt and champion emerging technologies?",
-    "How do they approach risk management in engineering decisions?",
-  ],
-  "Head of Supply Chain": [
-    "Describe their experience restructuring supply chains during major industry shifts.",
-    "How have they managed supplier diversification and regional sourcing strategies?",
-    "What is their track record with cost optimisation without compromising quality?",
-    "How do they handle supply chain disruptions and crisis management?",
-    "Describe their experience with digital supply chain tools and data-driven decision making.",
-    "How do they balance speed-to-market with supply chain resilience?",
+  "Chief Executive Officer": [
+    "Describe their experience leading large-scale organisational transformation.",
+    "What is their strategic vision for the company's future in the EV transition?",
+    "How have they managed board relationships and complex stakeholder dynamics?",
+    "Describe their track record with P&L management at significant scale.",
+    "What evidence is there of their ability to build culture and attract top talent?",
+    "How do they balance maintaining legacy revenue streams while investing in the future?",
   ],
   default: [
     "Describe their leadership style and how they manage large, complex teams.",

@@ -1,11 +1,11 @@
 import type {
   Role, TimeHorizon, TransitionContext,
   CompetencyForecast, CandidateProfile, CandidateTrajectory, Recommendation,
-  CandidateInput,
+  CandidateInput, TeamPairing, AgentReasoning,
 } from "@/lib/types";
 import { CANDIDATES, COMPETENCIES } from "@/lib/types";
 
-const EV_SEED = `BMW Group has publicly committed to making 50% of global sales fully electric by 2030. The Neue Klasse platform launching in 2025 marks the beginning of a full architectural shift away from combustion-based platforms. The powertrain function will progressively shift from mechanical engineering dominance to software, electronics, and electrochemistry. Traditional combustion expertise will remain relevant for the existing fleet and for markets where EV adoption is slower, but it is a declining domain within the organisation. Battery technology, power electronics, thermal management, and software-defined powertrain control are the growth domains. Supplier relationships must be rebuilt around a fundamentally different supply base. The function will need to manage a dual-track reality for approximately 3-5 years before combustion becomes a maintenance-only domain.`;
+const EV_SEED = `BMW Group has publicly committed to making 50% of global sales fully electric by 2030. The Neue Klasse platform launching in 2025 marks the beginning of a full architectural shift away from combustion-based platforms. The company must manage a dual-track reality for approximately 3-5 years. Battery technology, power electronics, software-defined vehicle control, and direct-to-consumer models are the growth domains.`;
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -14,7 +14,7 @@ async function callAgent(agentType: string, payload: any, retries = 2): Promise<
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 120000); // 2 min timeout
+      const timeout = setTimeout(() => controller.abort(), 120000);
 
       const response = await fetch(`${SUPABASE_URL}/functions/v1/futureproof-agent`, {
         method: "POST",
@@ -50,8 +50,8 @@ export async function runForesightAgent(
   timeHorizon: TimeHorizon
 ): Promise<CompetencyForecast[]> {
   const contextText = transitionContext === "Custom" ? customContext :
-    transitionContext === "Full EV Transition" ? EV_SEED :
-    `Industry transition: ${transitionContext}`;
+    transitionContext === "Full EV Transition" ? (customContext || EV_SEED) :
+    `Industry transition: ${transitionContext}. ${customContext || ""}`;
 
   const result = await callAgent("foresight", {
     role,
@@ -110,7 +110,7 @@ export async function runDecisionAgent(
   profiles: CandidateProfile[],
   forecasts: CompetencyForecast[],
   timeHorizon: TimeHorizon
-): Promise<{ recommendations: Recommendation[]; devilsAdvocate: string; keyInsight: string }> {
+): Promise<{ recommendations: Recommendation[]; devilsAdvocate: string; keyInsight: string; agentReasoning: AgentReasoning[] }> {
   const result = await callAgent("decision", {
     trajectories,
     profiles: profiles.map(p => ({ name: p.name, archetype: p.archetype, skills: p.skills })),
@@ -122,5 +122,18 @@ export async function runDecisionAgent(
     recommendations: result.recommendations || [],
     devilsAdvocate: result.devilsAdvocate || "",
     keyInsight: result.keyInsight || "",
+    agentReasoning: result.agentReasoning || [],
   };
+}
+
+export async function runTeamCompatibilityAgent(
+  profiles: CandidateProfile[],
+  cSuiteContext: string
+): Promise<TeamPairing[]> {
+  const result = await callAgent("teamCompatibility", {
+    candidates: profiles.map(p => ({ name: p.name, archetype: p.archetype, archetypeDescription: p.archetypeDescription })),
+    cSuiteContext,
+  });
+
+  return result.pairings || [];
 }
