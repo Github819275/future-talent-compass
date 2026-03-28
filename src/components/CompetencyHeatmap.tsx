@@ -7,12 +7,21 @@ interface Props {
   candidates: CandidateProfile[] | null;
 }
 
-const getColor = (score: number): string => {
-  if (score >= 75) return "bg-emerald-100 text-emerald-800 border border-emerald-200";
-  if (score >= 55) return "bg-emerald-50 text-emerald-700 border border-emerald-100";
-  if (score >= 40) return "bg-yellow-50 text-yellow-800 border border-yellow-200";
-  if (score >= 25) return "bg-orange-50 text-orange-800 border border-orange-200";
-  return "bg-red-50 text-red-800 border border-red-200";
+// Relative coloring: color cells based on percentile within the dataset, not absolute value
+const buildPercentileColorFn = (allScores: number[]) => {
+  const sorted = [...allScores].sort((a, b) => a - b);
+  const getPercentile = (v: number) => {
+    const idx = sorted.filter(s => s <= v).length;
+    return idx / sorted.length;
+  };
+  return (score: number): string => {
+    const p = getPercentile(score);
+    if (p >= 0.80) return "bg-emerald-100 text-emerald-800 border border-emerald-200";
+    if (p >= 0.60) return "bg-emerald-50 text-emerald-700 border border-emerald-100";
+    if (p >= 0.40) return "bg-yellow-50 text-yellow-800 border border-yellow-200";
+    if (p >= 0.20) return "bg-orange-50 text-orange-700 border border-orange-200";
+    return "bg-red-50 text-red-800 border border-red-200";
+  };
 };
 
 const CompetencyHeatmap = ({ forecasts, candidates }: Props) => {
@@ -25,6 +34,10 @@ const CompetencyHeatmap = ({ forecasts, candidates }: Props) => {
     year1: "Y1", year3: "Y3", year5: "Y5",
   };
   const timePoints = scoreKeys.map(k => keyToLabel[k] || k);
+
+  // Collect ALL scores to compute relative coloring
+  const allScores = forecasts.flatMap(f => scoreKeys.map(k => f.scores[k] ?? 0));
+  const getColor = buildPercentileColorFn(allScores);
 
   return (
     <motion.div
