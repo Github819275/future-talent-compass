@@ -4,6 +4,7 @@ import type {
   CandidateInput, TeamPairing, AgentReasoning,
 } from "@/lib/types";
 import { CANDIDATES, COMPETENCIES } from "@/lib/types";
+import { supabase } from "@/integrations/supabase/client";
 
 const EV_SEED = `BMW Group has publicly committed to making 50% of global sales fully electric by 2030. The Neue Klasse platform launching in 2025 marks the beginning of a full architectural shift away from combustion-based platforms. The company must manage a dual-track reality for approximately 3-5 years. Battery technology, power electronics, software-defined vehicle control, and direct-to-consumer models are the growth domains.`;
 
@@ -43,6 +44,15 @@ async function callAgent(agentType: string, payload: any, retries = 2): Promise<
   }
 }
 
+async function fetchCompetencies(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("custom_competencies")
+    .select("name")
+    .order("created_at", { ascending: true });
+  if (error || !data || data.length === 0) return COMPETENCIES;
+  return data.map((c: any) => c.name);
+}
+
 export async function runForesightAgent(
   role: Role,
   transitionContext: TransitionContext,
@@ -53,11 +63,13 @@ export async function runForesightAgent(
     transitionContext === "Full EV Transition" ? (customContext || EV_SEED) :
     `Industry transition: ${transitionContext}. ${customContext || ""}`;
 
+  const competencies = await fetchCompetencies();
+
   const result = await callAgent("foresight", {
     role,
     transitionContext: contextText,
     timeHorizon,
-    competencies: COMPETENCIES,
+    competencies,
   });
 
   return result.forecasts || [];
@@ -69,10 +81,11 @@ export async function runProfileAgent(candidateIndex: number): Promise<Candidate
 }
 
 export async function runProfileAgentCustom(candidate: CandidateInput): Promise<CandidateProfile> {
+  const competencies = await fetchCompetencies();
   const result = await callAgent("profile", {
     candidateName: candidate.name,
     referenceText: candidate.referenceText,
-    competencies: COMPETENCIES,
+    competencies,
   });
 
   return {
