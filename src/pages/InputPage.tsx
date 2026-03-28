@@ -25,9 +25,6 @@ const InputPage = () => {
   const [role, setRole] = useState<Role>("Chief Executive Officer");
   const [timeHorizon, setTimeHorizon] = useState<TimeHorizon>(5);
   const [candidates, setCandidates] = useState<CandidateInput[]>(DEFAULT_CANDIDATES);
-  const [cSuiteContext, setCsuiteContext] = useState(
-    "Current C-Suite: CFO (conservative, cost-focused, 20 years at BMW), COO (strong operations leader, manufacturing background, open to change), Chief Engineer (deep ICE expertise, sceptical of rapid EV transition), Chief Commercial Officer (digital-savvy, pushing for direct-to-consumer), Head of HR (focused on cultural transformation and talent retention)"
-  );
 
   const canRun = candidates.length >= 2 && candidates.every(c => c.name.trim() && c.referenceText.trim().length > 20);
 
@@ -38,7 +35,7 @@ const InputPage = () => {
       transitionContext: "Full EV Transition" as TransitionContext,
       customContext: companySituation,
       companySituation,
-      cSuiteContext,
+      cSuiteContext: "",
       candidates,
     }));
     navigate("/analysis");
@@ -238,19 +235,6 @@ const InputPage = () => {
           </div>
         </section>
 
-        {/* C-Suite Context */}
-        <section className="glass-card p-6 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-7 h-7 rounded-full bg-primary/15 border border-primary/25 flex items-center justify-center text-xs font-bold text-primary">4</div>
-            <h2 className="text-sm font-display font-semibold text-foreground uppercase tracking-wider">Existing C-Suite Context</h2>
-          </div>
-          <Textarea
-            value={cSuiteContext}
-            onChange={e => setCsuiteContext(e.target.value)}
-            placeholder="Describe the existing leadership team, their strengths, weaknesses, and dynamics..."
-            className="bg-muted/30 border-border/40 min-h-[100px] text-sm leading-relaxed"
-          />
-        </section>
 
         {/* Run Button */}
         <div className="flex flex-col items-center gap-3 pt-4">
