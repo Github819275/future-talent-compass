@@ -38,7 +38,7 @@ export interface CandidateProfile {
 
 export interface CompetencyForecast {
   competency: string;
-  scores: { hiring: number; year1: number; year3: number; year5: number };
+  scores: Record<string, number>;
   trend: "appreciating" | "stable" | "depreciating";
   reasoning: string;
 }

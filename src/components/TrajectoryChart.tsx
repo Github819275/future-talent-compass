@@ -9,15 +9,25 @@ interface Props {
   candidateProfiles?: CandidateProfile[] | null;
 }
 
+const buildTimeLabels = (horizon: TimeHorizon): string[] => {
+  const months = horizon * 12;
+  const labels = ["Hiring"];
+  for (let m = 6; m <= months; m += 6) {
+    if (m < 12) labels.push(`${m}M`);
+    else if (m % 12 === 0) labels.push(`Y${m / 12}`);
+    else labels.push(`Y${Math.floor(m / 12)}.5`);
+  }
+  return labels;
+};
+
 const TrajectoryChart = ({ trajectories, timeHorizon, candidateProfiles }: Props) => {
-  const timeLabels = ["Hiring", "Year 1", "Year 3", "Year 5"];
-  const visiblePoints = timeHorizon === 1 ? 2 : timeHorizon === 3 ? 3 : 4;
+  const timeLabels = buildTimeLabels(timeHorizon);
 
   const getColor = (candidateName: string, fallback: string = "#60A5FA") => {
     return candidateProfiles?.find(p => p.name === candidateName)?.color || fallback;
   };
 
-  const chartData = timeLabels.slice(0, visiblePoints).map((label, i) => {
+  const chartData = timeLabels.map((label, i) => {
     const point: Record<string, any> = { time: label };
     trajectories.forEach(t => {
       if (t.points[i]) {
