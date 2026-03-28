@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Loader2, Zap, ChevronDown, FileText, Plus, Trash2, Upload, HelpCircle } from "lucide-react";
+import { ArrowRight, Loader2, Zap, ChevronDown, FileText, Plus, Trash2, Upload, HelpCircle, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -9,13 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useRef } from "react";
 import {
-  ROLES, CANDIDATE_COLORS, DEFAULT_CANDIDATES,
+  CANDIDATE_COLORS, DEFAULT_CANDIDATES,
   type Role, type TimeHorizon, type TransitionContext, type CandidateInput,
 } from "@/lib/types";
+import { useCustomRoles } from "@/hooks/useCustomConfig";
 
 const InputPage = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { data: roles = [] } = useCustomRoles();
 
   const [companySituation, setCompanySituation] = useState(
     "BMW Group is undergoing a historic transformation from internal combustion engine (ICE) manufacturing to full electric vehicle (EV) production. The Neue Klasse platform launches in 2025, targeting 50% fully electric global sales by 2030. The company must manage a dual-track reality — maintaining profitability from legacy ICE operations while making massive investments in battery technology, software-defined vehicles, and direct-to-consumer models. The board is divided between traditionalists who want evolutionary change and progressives who believe BMW risks falling behind Tesla, BYD, and new Chinese competitors without revolutionary leadership."
@@ -111,6 +113,12 @@ const InputPage = () => {
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
               Hire for the leader your organisation will need — not just the one it needs today.
             </p>
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
+              <Settings className="w-4 h-4" /> Customize Roles & Evaluation Categories
+            </button>
           </motion.div>
         </div>
       </div>
@@ -150,7 +158,7 @@ const InputPage = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  {roles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
