@@ -406,14 +406,29 @@ const InputPanel = ({
             </motion.div>
           ))}
 
-          {candidates.length < 5 && (
+          <div className="flex gap-3">
+            {candidates.length < 5 && (
+              <button
+                onClick={addCandidate}
+                className="flex-1 py-3 border border-dashed border-border/50 rounded-lg text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> Add Candidate
+              </button>
+            )}
             <button
-              onClick={addCandidate}
-              className="w-full py-3 border border-dashed border-border/50 rounded-lg text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 py-3 border border-dashed border-border/50 rounded-lg text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2"
             >
-              <Plus className="w-4 h-4" /> Add Candidate
+              <Upload className="w-4 h-4" /> Import from CSV
             </button>
-          )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              onChange={handleCsvImport}
+              className="hidden"
+            />
+          </div>
         </div>
       </div>
 
