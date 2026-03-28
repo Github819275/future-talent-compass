@@ -65,6 +65,10 @@ export async function runForesightAgent(
 
 export async function runProfileAgent(candidateIndex: number): Promise<CandidateProfile> {
   const candidate = CANDIDATES[candidateIndex];
+  return runProfileAgentCustom(candidate);
+}
+
+export async function runProfileAgentCustom(candidate: CandidateInput): Promise<CandidateProfile> {
   const result = await callAgent("profile", {
     candidateName: candidate.name,
     referenceText: candidate.referenceText,
