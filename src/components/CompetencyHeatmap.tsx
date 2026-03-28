@@ -8,11 +8,11 @@ interface Props {
 }
 
 const getColor = (score: number): string => {
-  if (score >= 80) return "bg-emerald-500/80";
-  if (score >= 65) return "bg-emerald-500/50";
-  if (score >= 50) return "bg-yellow-500/60";
-  if (score >= 35) return "bg-amber-500/60";
-  return "bg-red-500/60";
+  if (score >= 75) return "bg-emerald-100 text-emerald-800 border border-emerald-200";
+  if (score >= 55) return "bg-emerald-50 text-emerald-700 border border-emerald-100";
+  if (score >= 40) return "bg-yellow-50 text-yellow-800 border border-yellow-200";
+  if (score >= 25) return "bg-orange-50 text-orange-800 border border-orange-200";
+  return "bg-red-50 text-red-800 border border-red-200";
 };
 
 const CompetencyHeatmap = ({ forecasts, candidates }: Props) => {
@@ -27,9 +27,9 @@ const CompetencyHeatmap = ({ forecasts, candidates }: Props) => {
       <div className="text-center space-y-2">
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium">
           <BarChart3 className="w-3 h-3" />
-          Phase 3 — Industry Foresight Report
+          Industry Foresight Report
         </div>
-        <h2 className="text-2xl font-display font-bold">Competency Evolution Forecast</h2>
+        <h2 className="text-2xl font-display font-bold text-foreground">Competency Evolution Forecast</h2>
         <p className="text-sm text-muted-foreground max-w-xl mx-auto">
           How the required competency profile for this role will evolve over the selected time horizon.
         </p>
@@ -43,7 +43,7 @@ const CompetencyHeatmap = ({ forecasts, candidates }: Props) => {
               {timePoints.map(t => (
                 <th key={t} className="text-center text-xs font-medium text-muted-foreground pb-3 px-2 w-20">{t}</th>
               ))}
-              <th className="text-center text-xs font-medium text-muted-foreground pb-3 px-2 w-16">Trend</th>
+              <th className="text-center text-xs font-medium text-muted-foreground pb-3 px-2 w-20">Trend</th>
             </tr>
           </thead>
           <tbody>
@@ -55,22 +55,23 @@ const CompetencyHeatmap = ({ forecasts, candidates }: Props) => {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="border-t border-border/30"
+                  className="border-t border-border/50"
                 >
-                  <td className="py-2 pr-4 text-xs text-foreground font-medium">{f.competency}</td>
+                  <td className="py-2.5 pr-4 text-xs text-foreground font-medium">{f.competency}</td>
                   {scores.map((s, j) => (
-                    <td key={j} className="py-2 px-2 text-center">
-                      <div className={`mx-auto w-14 h-8 rounded flex items-center justify-center text-[11px] font-semibold text-foreground ${getColor(s)}`}>
+                    <td key={j} className="py-2.5 px-2 text-center">
+                      <div className={`mx-auto w-14 h-8 rounded-md flex items-center justify-center text-[11px] font-semibold ${getColor(s)}`}>
                         {s}
                       </div>
                     </td>
                   ))}
-                  <td className="py-2 px-2 text-center">
-                    <span className={`text-xs font-medium ${
-                      f.trend === "appreciating" ? "text-teal" :
-                      f.trend === "depreciating" ? "text-amber" : "text-muted-foreground"
+                  <td className="py-2.5 px-2 text-center">
+                    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      f.trend === "appreciating" ? "bg-emerald-50 text-teal border border-emerald-200" :
+                      f.trend === "depreciating" ? "bg-orange-50 text-amber border border-orange-200" :
+                      "bg-muted text-muted-foreground"
                     }`}>
-                      {f.trend === "appreciating" ? "↑" : f.trend === "depreciating" ? "↓" : "→"}
+                      {f.trend === "appreciating" ? "↑ Rising" : f.trend === "depreciating" ? "↓ Falling" : "→ Stable"}
                     </span>
                   </td>
                 </motion.tr>
@@ -79,18 +80,18 @@ const CompetencyHeatmap = ({ forecasts, candidates }: Props) => {
           </tbody>
         </table>
 
-        <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border/30">
-          <span className="text-[10px] text-muted-foreground">Importance:</span>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-3 rounded bg-red-500/60" />
+        <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border/50">
+          <span className="text-[10px] text-muted-foreground font-medium">Importance:</span>
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-3 rounded bg-red-100 border border-red-200" />
             <span className="text-[10px] text-muted-foreground">Low</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-3 rounded bg-yellow-500/60" />
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-3 rounded bg-yellow-100 border border-yellow-200" />
             <span className="text-[10px] text-muted-foreground">Medium</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-3 rounded bg-emerald-500/80" />
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-3 rounded bg-emerald-100 border border-emerald-200" />
             <span className="text-[10px] text-muted-foreground">High</span>
           </div>
         </div>
@@ -101,10 +102,10 @@ const CompetencyHeatmap = ({ forecasts, candidates }: Props) => {
           {forecasts.filter(f => f.trend !== "stable").slice(0, 4).map(f => (
             <div key={f.competency} className="glass-card p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className={`text-sm ${f.trend === "appreciating" ? "text-teal" : "text-amber"}`}>
+                <span className={`text-sm font-bold ${f.trend === "appreciating" ? "text-teal" : "text-amber"}`}>
                   {f.trend === "appreciating" ? "▲" : "▼"}
                 </span>
-                <span className="text-sm font-medium text-foreground">{f.competency}</span>
+                <span className="text-sm font-semibold text-foreground">{f.competency}</span>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed">{f.reasoning}</p>
             </div>

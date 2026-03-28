@@ -63,23 +63,24 @@ const TrajectoryChart = ({ trajectories, timeHorizon, candidateProfiles }: Props
       <div className="glass-card p-6 glow-blue">
         <ResponsiveContainer width="100%" height={400}>
           <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 20% 18%)" />
-            <XAxis dataKey="time" stroke="hsl(215 20% 55%)" fontSize={12} fontFamily="Space Grotesk" />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220 13% 90%)" />
+            <XAxis dataKey="time" stroke="hsl(220 10% 46%)" fontSize={12} fontFamily="Space Grotesk" />
             <YAxis
               domain={[0, 100]}
-              stroke="hsl(215 20% 55%)"
+              stroke="hsl(220 10% 46%)"
               fontSize={12}
               fontFamily="Space Grotesk"
-              label={{ value: "Fit Score", angle: -90, position: "insideLeft", style: { fill: "hsl(215 20% 55%)", fontFamily: "Space Grotesk", fontSize: 12 } }}
+              label={{ value: "Fit Score", angle: -90, position: "insideLeft", style: { fill: "hsl(220 10% 46%)", fontFamily: "Space Grotesk", fontSize: 12 } }}
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "hsl(220 25% 10%)",
-                border: "1px solid hsl(220 20% 18%)",
-                borderRadius: "8px",
+                backgroundColor: "hsl(0 0% 100%)",
+                border: "1px solid hsl(220 13% 88%)",
+                borderRadius: "10px",
                 fontFamily: "Inter",
                 fontSize: 12,
-                color: "hsl(210 40% 98%)",
+                color: "hsl(220 25% 12%)",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
               }}
             />
 
@@ -106,7 +107,7 @@ const TrajectoryChart = ({ trajectories, timeHorizon, candidateProfiles }: Props
                   dataKey={t.candidateName}
                   stroke={color}
                   strokeWidth={3}
-                  dot={{ r: 5, fill: color, strokeWidth: 2, stroke: "hsl(220 25% 10%)" }}
+                  dot={{ r: 5, fill: color, strokeWidth: 2, stroke: "hsl(0 0% 100%)" }}
                   activeDot={{ r: 7 }}
                 />
               );
