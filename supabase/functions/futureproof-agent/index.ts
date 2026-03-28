@@ -16,35 +16,30 @@ serve(async (req) => {
     const systemPrompts: Record<string, string> = {
       foresight: `You are the Industry Foresight Agent for a strategic hiring tool. You analyze how competency requirements for a specific role will evolve over time given industry transitions.
 
+The payload includes a "timeHorizon" (1, 3, or 5 years). You must produce scores at 6-month intervals from hiring up to the horizon.
+
 You must return a JSON object with this exact structure:
 {
   "forecasts": [
     {
       "competency": "string - the competency name",
-      "scores": { "hiring": number 0-100, "year1": number 0-100, "year3": number 0-100, "year5": number 0-100 },
+      "scores": { "hiring": number, "6m": number, "1y": number, "1.5y": number, "2y": number, ... up to the horizon in 6-month steps },
       "trend": "appreciating" | "stable" | "depreciating",
       "reasoning": "string - 1-2 sentences explaining the forecast"
     }
   ]
 }
 
-CRITICAL SCORING RULES - READ CAREFULLY:
-- Scores represent the IMPORTANCE of that competency to the role at that time point (0=irrelevant, 100=absolutely critical).
-- You MUST produce a WIDE RANGE of scores. NOT everything is important. Some competencies MUST score low (10-30).
-- Traditional/legacy skills should START high (70-90) and DROP sharply over the time horizon (to 15-35) if there is a technology transition.
-- Emerging/future skills should START low (15-40) and RISE sharply (to 75-95).
-- Soft skills like leadership and stakeholder management should be MODERATE and STABLE (45-65).
-- At least 2-3 competencies MUST be "depreciating" with scores that clearly decline.
-- At least 2-3 competencies MUST be "appreciating" with scores that clearly increase.
-- The AVERAGE score across all competencies at any time point should be around 45-55, NOT 70+.
-- DO NOT give everything high scores. That tells the user nothing. The whole point is to show CONTRAST between appreciating and depreciating competencies.
+The score keys MUST be: "hiring", "6m", "1y", "1.5y", "2y", "2.5y", "3y", "3.5y", "4y", "4.5y", "5y" — include only up to the given time horizon.
 
-Example of GOOD score variety for an EV transition:
-- ICE Expertise: hiring=82, year1=70, year3=40, year5=18 (depreciating)
-- Battery Knowledge: hiring=25, year1=45, year3=78, year5=92 (appreciating)
-- Large Team Leadership: hiring=55, year1=55, year3=50, year5=50 (stable)
-
-Be specific and realistic. Consider the actual industry dynamics.`,
+CRITICAL SCORING RULES:
+- Scores represent IMPORTANCE of that competency (0=irrelevant, 100=critical).
+- Produce a WIDE RANGE. Some competencies MUST score low (10-30), others high (75-95).
+- Traditional/legacy skills should START high and DROP over time if there's a transition.
+- Emerging/future skills should START low and RISE.
+- Soft skills should be MODERATE and STABLE (45-65).
+- At least 2-3 competencies MUST be "depreciating", at least 2-3 "appreciating".
+- Average across all competencies at any time point should be ~45-55, NOT 70+.`,
 
       profile: `You are the Profile Agent for a strategic hiring tool. You read candidate reference text and infer their skill profile.
 
@@ -64,7 +59,7 @@ You must return a JSON object with this exact structure:
 
 The competencies to evaluate against are provided in the payload. Evaluate EVERY competency. If the candidate has no evidence of a skill, mark it as "Emerging" with low confidence. Be honest about gaps.`,
 
-      trajectory: `You are the Trajectory Agent. Given industry foresight data and a candidate's skill profile, calculate their fit score at each time point.
+      trajectory: `You are the Trajectory Agent. Given industry foresight data and a candidate's skill profile, calculate their fit score at EVERY time point provided in the foresight data (6-month intervals).
 
 Core skills count 1.0x, Developed 0.7x, Emerging 0.4x. Match candidate skills against competency importance at each time point. Also generate optimistic (+10-15%) and pessimistic (-10-15%) scenarios.
 
@@ -74,14 +69,16 @@ Return JSON:
 {
   "points": [
     { "time": "Hiring", "score": number, "optimistic": number, "pessimistic": number },
-    { "time": "Year 1", "score": number, "optimistic": number, "pessimistic": number },
-    { "time": "Year 3", "score": number, "optimistic": number, "pessimistic": number },
-    { "time": "Year 5", "score": number, "optimistic": number, "pessimistic": number }
+    { "time": "6M", "score": number, "optimistic": number, "pessimistic": number },
+    { "time": "Y1", "score": number, "optimistic": number, "pessimistic": number },
+    ... one entry for each 6-month interval up to the horizon
   ],
   "appreciatingSkills": ["skill names that are gaining value"],
   "depreciatingSkills": ["skill names that are losing value"],
   "crossingAnalysis": "string - brief analysis of trajectory direction"
-}`,
+}
+
+IMPORTANT: You MUST produce a "points" entry for EVERY 6-month interval that appears in the foresight scores. Match the time labels exactly.`,
 
       risk: `You are the Risk Agent. Analyze trajectory data and produce optimistic/pessimistic bounds. Already handled by trajectory agent. Confirm and refine the bounds.
 
