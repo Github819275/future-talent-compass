@@ -83,4 +83,19 @@
   .text-gradient-blue {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-[hsl(200,90%,60%)];
   }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(220 20% 18%) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(220 20% 22%);
+    border-radius: 2px;
+  }
 }
