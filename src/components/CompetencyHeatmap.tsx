@@ -1,0 +1,118 @@
+import { motion } from "framer-motion";
+import { BarChart3 } from "lucide-react";
+import type { CompetencyForecast, CandidateProfile } from "@/lib/types";
+
+interface Props {
+  forecasts: CompetencyForecast[];
+  candidates: CandidateProfile[] | null;
+}
+
+const getColor = (score: number): string => {
+  if (score >= 80) return "bg-emerald-500/80";
+  if (score >= 65) return "bg-emerald-500/50";
+  if (score >= 50) return "bg-yellow-500/60";
+  if (score >= 35) return "bg-amber-500/60";
+  return "bg-red-500/60";
+};
+
+const CompetencyHeatmap = ({ forecasts, candidates }: Props) => {
+  const timePoints = ["Hiring", "Year 1", "Year 3", "Year 5"];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6"
+    >
+      <div className="text-center space-y-2">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-medium">
+          <BarChart3 className="w-3 h-3" />
+          Phase 3 — Industry Foresight Report
+        </div>
+        <h2 className="text-2xl font-display font-bold">Competency Evolution Forecast</h2>
+        <p className="text-sm text-muted-foreground max-w-xl mx-auto">
+          How the required competency profile for this role will evolve over the selected time horizon.
+        </p>
+      </div>
+
+      <div className="glass-card p-6 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr>
+              <th className="text-left text-xs font-medium text-muted-foreground pb-3 pr-4 min-w-[200px]">Competency</th>
+              {timePoints.map(t => (
+                <th key={t} className="text-center text-xs font-medium text-muted-foreground pb-3 px-2 w-20">{t}</th>
+              ))}
+              <th className="text-center text-xs font-medium text-muted-foreground pb-3 px-2 w-16">Trend</th>
+            </tr>
+          </thead>
+          <tbody>
+            {forecasts.map((f, i) => {
+              const scores = [f.scores.hiring, f.scores.year1, f.scores.year3, f.scores.year5];
+              return (
+                <motion.tr
+                  key={f.competency}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="border-t border-border/30"
+                >
+                  <td className="py-2 pr-4 text-xs text-foreground font-medium">{f.competency}</td>
+                  {scores.map((s, j) => (
+                    <td key={j} className="py-2 px-2 text-center">
+                      <div className={`mx-auto w-14 h-8 rounded flex items-center justify-center text-[11px] font-semibold text-foreground ${getColor(s)}`}>
+                        {s}
+                      </div>
+                    </td>
+                  ))}
+                  <td className="py-2 px-2 text-center">
+                    <span className={`text-xs font-medium ${
+                      f.trend === "appreciating" ? "text-teal" :
+                      f.trend === "depreciating" ? "text-amber" : "text-muted-foreground"
+                    }`}>
+                      {f.trend === "appreciating" ? "↑" : f.trend === "depreciating" ? "↓" : "→"}
+                    </span>
+                  </td>
+                </motion.tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border/30">
+          <span className="text-[10px] text-muted-foreground">Importance:</span>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-3 rounded bg-red-500/60" />
+            <span className="text-[10px] text-muted-foreground">Low</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-3 rounded bg-yellow-500/60" />
+            <span className="text-[10px] text-muted-foreground">Medium</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-3 rounded bg-emerald-500/80" />
+            <span className="text-[10px] text-muted-foreground">High</span>
+          </div>
+        </div>
+      </div>
+
+      {forecasts.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {forecasts.filter(f => f.trend !== "stable").slice(0, 4).map(f => (
+            <div key={f.competency} className="glass-card p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`text-sm ${f.trend === "appreciating" ? "text-teal" : "text-amber"}`}>
+                  {f.trend === "appreciating" ? "▲" : "▼"}
+                </span>
+                <span className="text-sm font-medium text-foreground">{f.competency}</span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">{f.reasoning}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
+export default CompetencyHeatmap;
