@@ -80,15 +80,21 @@ const Recommendations = ({ recommendations, devilsAdvocate, keyInsight }: Props)
         })}
       </div>
 
-      {/* Devil's Advocate */}
+      {/* Final Verdict */}
       {devilsAdvocate && (
-        <div className="glass-card p-5 border-l-4 border-l-danger bg-red-50/30">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="w-4 h-4 text-danger" />
-            <h3 className="text-sm font-display font-semibold text-foreground">Devil's Advocate</h3>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="glass-card p-6 border-l-4 border-l-primary glow-blue text-center"
+        >
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <Lightbulb className="w-5 h-5 text-primary" />
+            <h3 className="text-sm font-display font-semibold text-primary uppercase tracking-wider">FutureProof Verdict</h3>
           </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">{devilsAdvocate}</p>
-        </div>
+          <p className="text-base font-display font-semibold text-foreground leading-relaxed max-w-3xl mx-auto">
+            {devilsAdvocate}
+          </p>
+        </motion.div>
       )}
     </motion.div>
   );
