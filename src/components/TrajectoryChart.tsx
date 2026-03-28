@@ -86,14 +86,15 @@ const TrajectoryChart = ({ trajectories, timeHorizon }: Props) => {
               }}
             />
 
-            {trajectories.map((t, i) => {
-              const c = CANDIDATES[i];
+            {trajectories.map((t) => {
+              const profile = profiles?.find(p => p.name === t.candidateName);
+              const color = profile?.color || "#60A5FA";
               return (
                 <Area
                   key={`${t.candidateName}_band`}
                   dataKey={`${t.candidateName}_opt`}
                   stroke="none"
-                  fill={c?.color || "#60A5FA"}
+                  fill={color}
                   fillOpacity={0.08}
                   baseLine={chartData.map(d => d[`${t.candidateName}_pes`] || 0)}
                 />
