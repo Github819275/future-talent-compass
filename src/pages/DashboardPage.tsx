@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Trash2, Briefcase, Target, ArrowLeft, Loader2 } from "lucide-react";
+import { Plus, Trash2, Briefcase, Target, ArrowLeft, Loader2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -16,6 +16,8 @@ const DashboardPage = () => {
   const navigate = useNavigate();
   const [newRole, setNewRole] = useState("");
   const [newCompetency, setNewCompetency] = useState("");
+  const rolesFileRef = useRef<HTMLInputElement>(null);
+  const compFileRef = useRef<HTMLInputElement>(null);
 
   const { data: roles = [], isLoading: rolesLoading } = useCustomRoles();
   const { data: competencies = [], isLoading: compLoading } = useCustomCompetencies();
@@ -44,6 +46,58 @@ const DashboardPage = () => {
       setNewCompetency("");
       toast.success(`Added "${name}"`);
     } catch { toast.error("Failed to add competency"); }
+  };
+
+  const parseCsvLines = (text: string): string[] => {
+    return text
+      .split(/\r?\n/)
+      .map(line => line.replace(/^["']|["']$/g, "").trim())
+      .filter(line => line.length > 0);
+  };
+
+  const handleCsvImport = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: "roles" | "competencies",
+    existing: string[],
+    addFn: (name: string) => Promise<void>,
+    fileRef: React.RefObject<HTMLInputElement | null>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const text = ev.target?.result as string;
+        const lines = parseCsvLines(text);
+
+        // Skip header if it looks like one
+        const start = lines[0]?.toLowerCase().includes("name") || lines[0]?.toLowerCase().includes("role") || lines[0]?.toLowerCase().includes("competenc") || lines[0]?.toLowerCase().includes("categor") ? 1 : 0;
+
+        let added = 0;
+        for (let i = start; i < lines.length; i++) {
+          // Handle CSV with multiple columns — take the first column
+          const name = lines[i].split(",")[0].replace(/^["']|["']$/g, "").trim();
+          if (!name || existing.includes(name)) continue;
+          try {
+            await addFn(name);
+            added++;
+          } catch {
+            // skip duplicates
+          }
+        }
+
+        if (added === 0) {
+          toast.info("No new items found in CSV.");
+        } else {
+          toast.success(`Imported ${added} ${type === "roles" ? "role" : "categor"}${added > 1 ? (type === "roles" ? "s" : "ies") : (type === "roles" ? "" : "y")}`);
+        }
+      } catch {
+        toast.error("Failed to parse CSV file.");
+      }
+    };
+    reader.readAsText(file);
+    if (fileRef.current) fileRef.current.value = "";
   };
 
   return (
@@ -112,6 +166,13 @@ const DashboardPage = () => {
                 <Plus className="w-3.5 h-3.5" /> Add
               </Button>
             </div>
+            <button
+              onClick={() => rolesFileRef.current?.click()}
+              className="w-full py-2.5 border border-dashed border-border/50 rounded-lg text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2"
+            >
+              <Upload className="w-3.5 h-3.5" /> Import Roles from CSV
+            </button>
+            <input ref={rolesFileRef} type="file" accept=".csv,.txt" onChange={e => handleCsvImport(e, "roles", roles, (n) => addRole.mutateAsync(n), rolesFileRef)} className="hidden" />
           </section>
 
           {/* Competencies */}
@@ -163,6 +224,13 @@ const DashboardPage = () => {
                 <Plus className="w-3.5 h-3.5" /> Add
               </Button>
             </div>
+            <button
+              onClick={() => compFileRef.current?.click()}
+              className="w-full py-2.5 border border-dashed border-border/50 rounded-lg text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2"
+            >
+              <Upload className="w-3.5 h-3.5" /> Import Categories from CSV
+            </button>
+            <input ref={compFileRef} type="file" accept=".csv,.txt" onChange={e => handleCsvImport(e, "competencies", competencies, (n) => addCompetency.mutateAsync(n), compFileRef)} className="hidden" />
           </section>
         </div>
       </main>
