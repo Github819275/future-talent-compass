@@ -1,4 +1,3 @@
-import { supabase } from "@/integrations/supabase/client";
 import type {
   Role, TimeHorizon, TransitionContext,
   CompetencyForecast, CandidateProfile, CandidateTrajectory, Recommendation,
@@ -7,12 +6,40 @@ import { CANDIDATES, COMPETENCIES } from "@/lib/types";
 
 const EV_SEED = `BMW Group has publicly committed to making 50% of global sales fully electric by 2030. The Neue Klasse platform launching in 2025 marks the beginning of a full architectural shift away from combustion-based platforms. The powertrain function will progressively shift from mechanical engineering dominance to software, electronics, and electrochemistry. Traditional combustion expertise will remain relevant for the existing fleet and for markets where EV adoption is slower, but it is a declining domain within the organisation. Battery technology, power electronics, thermal management, and software-defined powertrain control are the growth domains. Supplier relationships must be rebuilt around a fundamentally different supply base. The function will need to manage a dual-track reality for approximately 3-5 years before combustion becomes a maintenance-only domain.`;
 
-async function callAgent(agentType: string, payload: any) {
-  const { data, error } = await supabase.functions.invoke("futureproof-agent", {
-    body: { agentType, payload },
-  });
-  if (error) throw new Error(`Agent ${agentType} failed: ${error.message}`);
-  return data;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+async function callAgent(agentType: string, payload: any, retries = 2): Promise<any> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 120000); // 2 min timeout
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/futureproof-agent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "apikey": SUPABASE_KEY,
+        },
+        body: JSON.stringify({ agentType, payload }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Agent ${agentType} returned ${response.status}: ${errorText}`);
+      }
+
+      return await response.json();
+    } catch (err) {
+      if (attempt === retries) throw err;
+      console.warn(`Agent ${agentType} attempt ${attempt + 1} failed, retrying...`, err);
+      await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+    }
+  }
 }
 
 export async function runForesightAgent(
