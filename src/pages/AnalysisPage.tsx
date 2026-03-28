@@ -11,6 +11,7 @@ import {
   runProfileAgentCustom,
   runTrajectoryAgent,
   runDecisionAgent,
+  runTeamCompatibilityAgent,
 } from "@/lib/agents";
 import type {
   Role, TimeHorizon, TransitionContext,
@@ -20,10 +21,12 @@ import type {
 const AnalysisPage = () => {
   const navigate = useNavigate();
   const [state, setState] = useState<AnalysisState>({
-    role: "VP of Powertrain",
+    role: "Chief Executive Officer",
     timeHorizon: 5,
     transitionContext: "Full EV Transition",
     customContext: "",
+    companySituation: "",
+    cSuiteContext: "",
     phase: 2,
     industryForesight: null,
     candidateProfiles: null,
@@ -31,6 +34,8 @@ const AnalysisPage = () => {
     recommendations: null,
     devilsAdvocate: null,
     keyInsight: null,
+    teamPairings: null,
+    agentReasoning: null,
     agentStatus: {
       foresight: "idle",
       profile: "idle",
@@ -50,38 +55,62 @@ const AnalysisPage = () => {
     }));
   };
 
-  const runAnalysis = useCallback(async (role: Role, transitionContext: TransitionContext, customContext: string, timeHorizon: TimeHorizon, cands: CandidateInput[]) => {
+  const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+  const runAnalysis = useCallback(async (
+    role: Role, transitionContext: TransitionContext, customContext: string,
+    timeHorizon: TimeHorizon, cands: CandidateInput[], cSuiteContext: string
+  ) => {
     setIsRunning(true);
 
     try {
+      // Step 1: Context/Foresight Agent
       updateStatus("foresight", "active");
+      await delay(1500);
       const forecasts = await runForesightAgent(role, transitionContext, customContext, timeHorizon);
       setState(prev => ({ ...prev, industryForesight: forecasts }));
       updateStatus("foresight", "complete");
 
+      // Step 2: Candidate/Profile Agent
       updateStatus("profile", "active");
+      await delay(1500);
       const profiles = await Promise.all(cands.map(c => runProfileAgentCustom(c)));
       setState(prev => ({ ...prev, candidateProfiles: profiles, phase: 3 }));
       updateStatus("profile", "complete");
 
+      // Step 3: Trajectory Agent
       updateStatus("trajectory", "active");
+      await delay(1500);
       const trajectories = await Promise.all(
         profiles.map(p => runTrajectoryAgent(p.name, p, forecasts))
       );
       setState(prev => ({ ...prev, trajectories }));
       updateStatus("trajectory", "complete");
-      updateStatus("risk", "active");
-      await new Promise(r => setTimeout(r, 500));
-      updateStatus("risk", "complete");
-      setState(prev => ({ ...prev, phase: 4 }));
 
+      // Step 4: Risk Agent (+ Team Compatibility)
+      updateStatus("risk", "active");
+      await delay(1500);
+      let teamPairings = null;
+      if (cSuiteContext) {
+        try {
+          teamPairings = await runTeamCompatibilityAgent(profiles, cSuiteContext);
+        } catch (e) {
+          console.warn("Team compatibility agent failed:", e);
+        }
+      }
+      setState(prev => ({ ...prev, teamPairings, phase: 4 }));
+      updateStatus("risk", "complete");
+
+      // Step 5: Decision Agent
       updateStatus("decision", "active");
+      await delay(1500);
       const decision = await runDecisionAgent(trajectories, profiles, forecasts, timeHorizon);
       setState(prev => ({
         ...prev,
         recommendations: decision.recommendations,
         devilsAdvocate: decision.devilsAdvocate,
         keyInsight: decision.keyInsight,
+        agentReasoning: decision.agentReasoning || null,
         phase: 5,
       }));
       updateStatus("decision", "complete");
@@ -113,8 +142,10 @@ const AnalysisPage = () => {
       timeHorizon: input.timeHorizon,
       transitionContext: input.transitionContext,
       customContext: input.customContext,
+      companySituation: input.companySituation || "",
+      cSuiteContext: input.cSuiteContext || "",
     }));
-    runAnalysis(input.role, input.transitionContext, input.customContext, input.timeHorizon, input.candidates);
+    runAnalysis(input.role, input.transitionContext, input.customContext, input.timeHorizon, input.candidates, input.cSuiteContext || "");
   }, [navigate, runAnalysis, hasStarted]);
 
   return (
@@ -124,7 +155,7 @@ const AnalysisPage = () => {
           <div className="flex items-center gap-3">
             <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-lg">
               <Settings className="w-3 h-3" />
-              {state.role} · {state.timeHorizon}Y · {state.transitionContext}
+              {state.role} · {state.timeHorizon}Y
             </div>
             <Button
               variant="outline"
@@ -142,7 +173,7 @@ const AnalysisPage = () => {
         {/* Pipeline */}
         <div className="glass-card px-5 py-4">
           <div className="flex items-center gap-2 mb-3">
-            <div className={`w-1.5 h-1.5 rounded-full ${isRunning ? "bg-primary animate-pulse" : "bg-teal"}`} />
+            <div className={`w-1.5 h-1.5 rounded-full ${isRunning ? "bg-primary animate-pulse" : "bg-emerald-500"}`} />
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
               {isRunning ? "Processing…" : "Pipeline Complete"}
             </span>

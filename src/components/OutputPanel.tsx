@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, BarChart3, TrendingUp, Award } from "lucide-react";
+import { Users, BarChart3, TrendingUp, Award, UserCheck } from "lucide-react";
 import CandidateCards from "@/components/CandidateCards";
 import CompetencyHeatmap from "@/components/CompetencyHeatmap";
 import TrajectoryChart from "@/components/TrajectoryChart";
 import Recommendations from "@/components/Recommendations";
+import TeamCompatibility from "@/components/TeamCompatibility";
+import AgentReasoningPanel from "@/components/AgentReasoningPanel";
 import { Button } from "@/components/ui/button";
 import type { AnalysisState } from "@/lib/types";
 
@@ -16,6 +18,7 @@ const tabs = [
   { id: "candidates", label: "Candidates", icon: Users },
   { id: "competencies", label: "Competencies", icon: BarChart3 },
   { id: "trajectories", label: "Trajectories", icon: TrendingUp },
+  { id: "compatibility", label: "Team Fit", icon: UserCheck },
   { id: "verdict", label: "Verdict", icon: Award },
 ] as const;
 
@@ -27,12 +30,14 @@ const OutputPanel = ({ state }: Props) => {
   const hasForesight = state.industryForesight && state.industryForesight.length > 0;
   const hasTrajectories = state.trajectories && state.trajectories.length > 0;
   const hasRecommendations = state.recommendations && state.recommendations.length > 0;
+  const hasPairings = state.teamPairings && state.teamPairings.length > 0;
 
   const isTabReady = (id: TabId) => {
     switch (id) {
       case "candidates": return true;
       case "competencies": return !!hasForesight;
       case "trajectories": return !!hasTrajectories;
+      case "compatibility": return !!hasPairings;
       case "verdict": return !!hasRecommendations;
     }
   };
@@ -101,12 +106,21 @@ const OutputPanel = ({ state }: Props) => {
             />
           )}
 
+          {activeTab === "compatibility" && hasPairings && (
+            <TeamCompatibility pairings={state.teamPairings!} />
+          )}
+
           {activeTab === "verdict" && hasRecommendations && (
-            <Recommendations
-              recommendations={state.recommendations}
-              devilsAdvocate={state.devilsAdvocate}
-              keyInsight={state.keyInsight}
-            />
+            <div className="space-y-6">
+              <Recommendations
+                recommendations={state.recommendations}
+                devilsAdvocate={state.devilsAdvocate}
+                keyInsight={state.keyInsight}
+              />
+              {state.agentReasoning && state.agentReasoning.length > 0 && (
+                <AgentReasoningPanel reasoning={state.agentReasoning} />
+              )}
+            </div>
           )}
         </motion.div>
       </AnimatePresence>
