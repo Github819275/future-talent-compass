@@ -72,9 +72,13 @@ const InputPage = () => {
 
         if (config.situation) setCompanySituation(config.situation);
         if (config.role) {
-          // Try to match to existing roles, otherwise use as-is
-          const matchedRole = roles.find(r => r.toLowerCase().includes(config.role.toLowerCase()));
+          // Match against available roles (case-insensitive, partial match both ways)
+          const matchedRole = roles.find(r =>
+            r.toLowerCase().includes(config.role.toLowerCase()) ||
+            config.role.toLowerCase().includes(r.toLowerCase())
+          );
           if (matchedRole) setRole(matchedRole as Role);
+          else setRole(config.role as Role);
         }
         if (config.timeHorizon) {
           const th = config.timeHorizon;
