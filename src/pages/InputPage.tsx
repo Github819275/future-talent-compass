@@ -92,6 +92,9 @@ const InputPage = () => {
         if (config.candidates.length >= 2) {
           setCandidates(config.candidates);
         }
+        if (config.evaluationCategories.length > 0) {
+          setEvaluationCategories(config.evaluationCategories);
+        }
         setConfigLoaded(true);
         toast.success(`Configuration loaded — ${config.candidates.length} candidates, ${config.evaluationCategories.length} evaluation categories`);
       } catch (err: any) {
