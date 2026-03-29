@@ -58,7 +58,8 @@ const AnalysisPage = () => {
 
   const runAnalysis = useCallback(async (
     role: Role, transitionContext: TransitionContext, customContext: string,
-    timeHorizon: TimeHorizon, cands: CandidateInput[], cSuiteContext: string
+    timeHorizon: TimeHorizon, cands: CandidateInput[], cSuiteContext: string,
+    evaluationCategories?: string[]
   ) => {
     setIsRunning(true);
 
@@ -66,14 +67,14 @@ const AnalysisPage = () => {
       // Step 1: Context/Foresight Agent
       updateStatus("foresight", "active");
       await delay(1500);
-      const forecasts = await runForesightAgent(role, transitionContext, customContext, timeHorizon);
+      const forecasts = await runForesightAgent(role, transitionContext, customContext, timeHorizon, evaluationCategories);
       setState(prev => ({ ...prev, industryForesight: forecasts }));
       updateStatus("foresight", "complete");
 
       // Step 2: Candidate/Profile Agent
       updateStatus("profile", "active");
       await delay(1500);
-      const profiles = await Promise.all(cands.map(c => runProfileAgentCustom(c)));
+      const profiles = await Promise.all(cands.map(c => runProfileAgentCustom(c, evaluationCategories)));
       setState(prev => ({ ...prev, candidateProfiles: profiles, phase: 3 }));
       updateStatus("profile", "complete");
 
@@ -143,7 +144,7 @@ const AnalysisPage = () => {
       companySituation: input.companySituation || "",
       cSuiteContext: input.cSuiteContext || "",
     }));
-    runAnalysis(input.role, input.transitionContext, input.customContext, input.timeHorizon, input.candidates, input.cSuiteContext || "");
+    runAnalysis(input.role, input.transitionContext, input.customContext, input.timeHorizon, input.candidates, input.cSuiteContext || "", input.evaluationCategories);
   }, [navigate, runAnalysis, hasStarted]);
 
   return (

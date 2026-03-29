@@ -28,6 +28,7 @@ const InputPage = () => {
   const [role, setRole] = useState<Role>("Chief Executive Officer");
   const [timeHorizon, setTimeHorizon] = useState<TimeHorizon>(5);
   const [candidates, setCandidates] = useState<CandidateInput[]>(DEFAULT_CANDIDATES);
+  const [evaluationCategories, setEvaluationCategories] = useState<string[]>([]);
   const [configLoaded, setConfigLoaded] = useState(false);
 
   const canRun = candidates.length >= 2 && candidates.every(c => c.name.trim() && c.referenceText.trim().length > 20);
@@ -41,6 +42,7 @@ const InputPage = () => {
       companySituation,
       cSuiteContext: "",
       candidates,
+      evaluationCategories: evaluationCategories.length > 0 ? evaluationCategories : undefined,
     }));
     navigate("/analysis");
   };
@@ -89,6 +91,9 @@ const InputPage = () => {
         }
         if (config.candidates.length >= 2) {
           setCandidates(config.candidates);
+        }
+        if (config.evaluationCategories.length > 0) {
+          setEvaluationCategories(config.evaluationCategories);
         }
         setConfigLoaded(true);
         toast.success(`Configuration loaded — ${config.candidates.length} candidates, ${config.evaluationCategories.length} evaluation categories`);
