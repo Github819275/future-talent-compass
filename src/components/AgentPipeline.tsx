@@ -9,7 +9,7 @@ const AGENTS = [
   { key: "foresight", label: "Context Agent", description: "Analysing organisational mandate" },
   { key: "profile", label: "Candidate Agent", description: "Profiling leadership archetypes" },
   { key: "trajectory", label: "Foresight Agent", description: "Modelling trajectory over time" },
-  { key: "risk", label: "Risk Agent", description: "Evaluating transition risks" },
+  
   { key: "decision", label: "Decision Agent", description: "Generating conditional recommendation" },
 ];
 
