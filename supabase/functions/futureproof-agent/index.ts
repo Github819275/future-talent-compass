@@ -1,21 +1,29 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Content-Type": "application/json",
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-      },
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
-  const { agentType, payload } = await req.json();
+  try {
+    if (!LOVABLE_API_KEY) {
+      return new Response(JSON.stringify({ error: "Lovable AI is not configured." }), {
+        status: 500,
+        headers: corsHeaders,
+      });
+    }
 
-  const systemPrompts: Record<string, string> = {
-    foresight: `You are the Industry Foresight Agent for a strategic C-suite hiring tool. You analyze how competency requirements for a specific role will evolve over time given industry transitions.
+    const { agentType, payload } = await req.json();
+
+    const systemPrompts: Record<string, string> = {
+      foresight: `You are the Industry Foresight Agent for a strategic C-suite hiring tool. You analyze how competency requirements for a specific role will evolve over time given industry transitions.
 
 The payload includes a "timeHorizon" (1, 3, or 5 years). You must produce scores at 6-month intervals from hiring up to the horizon.
 
@@ -135,7 +143,7 @@ Return JSON:
   ]
 }`,
 
-    teamCompatibility: `You are the Team Compatibility Agent. Given candidate profiles and the existing C-Suite context, analyze how each candidate would pair with each existing C-suite member.
+      teamCompatibility: `You are the Team Compatibility Agent. Given candidate profiles and the existing C-Suite context, analyze how each candidate would pair with each existing C-suite member.
 
 Return JSON:
 {
@@ -151,47 +159,75 @@ Return JSON:
 }
 
 Generate 2-3 pairings per candidate. Mix of strong and risk pairings. Be specific and insightful — explain the dynamic, not just "good fit" or "bad fit". Example: "Visionary CEO + operational COO — classic transformation pairing that provides execution backbone" or "Both legacy-oriented — creates transformation gap risk with no one championing the new paradigm".`
-  };
+    };
 
-  const systemPrompt = systemPrompts[agentType];
-  if (!systemPrompt) throw new Error(`Unknown agent type: ${agentType}`);
+    const systemPrompt = systemPrompts[agentType];
+    if (!systemPrompt) {
+      return new Response(JSON.stringify({ error: `Unknown agent type: ${agentType}` }), {
+        status: 400,
+        headers: corsHeaders,
+      });
+    }
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: JSON.stringify(payload) },
-      ],
-      temperature: 0.7,
-      response_format: { type: "json_object" },
-    }),
-  });
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: JSON.stringify(payload) },
+        ],
+        temperature: 0.7,
+        response_format: { type: "json_object" },
+      }),
+    });
 
-  if (!response.ok) {
-    const err = await response.text();
-    return new Response(JSON.stringify({ error: err }), {
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("futureproof-agent gateway error", response.status, err);
+
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Lovable AI rate limit reached. Please wait a moment and try again." }), {
+          status: 429,
+          headers: corsHeaders,
+        });
+      }
+
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "Lovable AI credits are exhausted. Please add workspace credits and try again." }), {
+          status: 402,
+          headers: corsHeaders,
+        });
+      }
+
+      return new Response(JSON.stringify({ error: err || "Lovable AI request failed." }), {
+        status: 500,
+        headers: corsHeaders,
+      });
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+
+    let parsed;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      parsed = { raw: content };
+    }
+
+    return new Response(JSON.stringify(parsed), {
+      headers: corsHeaders,
+    });
+  } catch (error) {
+    console.error("futureproof-agent unhandled error", error);
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unexpected error" }), {
       status: 500,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      headers: corsHeaders,
     });
   }
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content;
-
-  let parsed;
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    parsed = { raw: content };
-  }
-
-  return new Response(JSON.stringify(parsed), {
-    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-  });
 });
