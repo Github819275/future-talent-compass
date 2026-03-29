@@ -8,13 +8,17 @@ export interface ParsedConfig {
   candidates: CandidateInput[];
 }
 
-export function parseConfigCsv(text: string): ParsedConfig {
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
+export function parseConfigCsv(rawText: string): ParsedConfig {
+  // Normalize line endings: remove \r
+  const text = rawText.replace(/\r/g, "");
+  const lines = text.split("\n").filter(l => l.trim());
   if (lines.length < 2) throw new Error("CSV needs a header row and data rows.");
 
-  const header = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/['"]/g, ""));
-  const fieldIdx = header.findIndex(h => h === "field");
-  const valueIdx = header.findIndex(h => h === "value");
+  // Parse header
+  const headerLine = lines[0];
+  const headerCols = headerLine.split(",").map(h => h.trim().toLowerCase());
+  const fieldIdx = headerCols.findIndex(h => h === "field");
+  const valueIdx = headerCols.findIndex(h => h === "value");
   if (fieldIdx === -1 || valueIdx === -1) {
     throw new Error("CSV must have 'FIELD' and 'VALUE' columns.");
   }
@@ -23,29 +27,27 @@ export function parseConfigCsv(text: string): ParsedConfig {
   let role = "";
   let timeHorizon = 5;
   const evaluationCategories: string[] = [];
-
-  // For candidates: collect names and profiles in order, then pair them
   const candidateNames: string[] = [];
   const candidateProfiles: string[] = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const row = smartSplit(lines[i]);
-    const field = row[fieldIdx]?.replace(/^["']|["']$/g, "").trim().toLowerCase() || "";
-    // Rejoin everything after the first comma as the value (handles commas in text)
-    const rawLine = lines[i];
-    const firstCommaIdx = rawLine.indexOf(",");
-    const value = firstCommaIdx >= 0 ? rawLine.substring(firstCommaIdx + 1).trim() : "";
+    const line = lines[i];
+    // Extract field: everything before first comma
+    const firstComma = line.indexOf(",");
+    if (firstComma === -1) continue;
 
+    const field = line.substring(0, firstComma).trim().toLowerCase();
+    const value = line.substring(firstComma + 1).trim();
     if (!field || !value) continue;
 
     if (field === "situation") {
       situation = value;
     } else if (field === "role") {
       role = value;
-    } else if (field === "strategic_horizon" || field === "strategichorizon" || field === "time_horizon") {
+    } else if (field === "strategic_horizon" || field === "time_horizon") {
       const match = value.match(/(\d+)/);
       if (match) timeHorizon = parseInt(match[1]);
-    } else if (field === "evaluation_category" || field.startsWith("evaluation")) {
+    } else if (field === "evaluation_category") {
       evaluationCategories.push(value);
     } else if (field === "candidate_name") {
       candidateNames.push(value);
@@ -54,38 +56,16 @@ export function parseConfigCsv(text: string): ParsedConfig {
     }
   }
 
-  // Pair names with profiles in order
+  // Pair candidate names with profiles in order
   const candidates: CandidateInput[] = [];
   for (let i = 0; i < candidateNames.length; i++) {
-    const name = candidateNames[i];
-    const profile = candidateProfiles[i] || "";
     candidates.push({
-      name,
+      name: candidateNames[i],
       title: role ? `${role} Candidate` : "Candidate",
       color: CANDIDATE_COLORS[i % CANDIDATE_COLORS.length],
-      referenceText: profile,
+      referenceText: candidateProfiles[i] || "",
     });
   }
 
   return { situation, role, timeHorizon, evaluationCategories, candidates };
-}
-
-function smartSplit(line: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"' || char === "'") {
-      inQuotes = !inQuotes;
-    } else if (char === "," && !inQuotes) {
-      result.push(current);
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-  result.push(current);
-  return result;
 }
