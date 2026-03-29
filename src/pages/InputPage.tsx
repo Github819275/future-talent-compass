@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Loader2, Zap, ChevronDown, FileText, Plus, Trash2, Upload, HelpCircle, Settings } from "lucide-react";
+import { ArrowRight, Loader2, ChevronDown, FileText, Plus, Trash2, Upload, HelpCircle, Settings } from "lucide-react";
+import bmwLogo from "@/assets/bmw-logo.png";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
