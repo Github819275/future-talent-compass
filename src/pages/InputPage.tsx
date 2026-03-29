@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Plus, Trash2, Upload, HelpCircle, Settings } from "lucide-react";
@@ -13,23 +13,57 @@ import {
   type Role, type TimeHorizon, type TransitionContext, type CandidateInput,
 } from "@/lib/types";
 import { parseConfigCsv } from "@/lib/csvConfigParser";
-import { useCustomRoles } from "@/hooks/useCustomConfig";
+import { useCustomRoles, useAddRole, useAddCompetency, useDeleteCompetency, useCustomCompetencies } from "@/hooks/useCustomConfig";
+import { supabase } from "@/integrations/supabase/client";
 import bmwLogo from "@/assets/bmw-logo.png";
 import bmwHeroCar from "@/assets/bmw-hero-car.jpg";
+
+const DRAFT_KEY = "futureproof_draft";
+
+interface DraftState {
+  companySituation: string;
+  role: string;
+  timeHorizon: number;
+  candidates: CandidateInput[];
+  configLoaded: boolean;
+}
+
+function loadDraft(): DraftState | null {
+  try {
+    const raw = sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+function saveDraft(state: DraftState) {
+  sessionStorage.setItem(DRAFT_KEY, JSON.stringify(state));
+}
 
 const InputPage = () => {
   const navigate = useNavigate();
   const configFileRef = useRef<HTMLInputElement>(null);
   const { data: roles = [] } = useCustomRoles();
+  const { data: competencies = [] } = useCustomCompetencies();
+  const addRole = useAddRole();
+  const addCompetency = useAddCompetency();
+  const deleteCompetency = useDeleteCompetency();
+
+  const draft = loadDraft();
 
   const [companySituation, setCompanySituation] = useState(
+    draft?.companySituation ??
     "BMW Group is undergoing a historic transformation from internal combustion engine (ICE) manufacturing to full electric vehicle (EV) production. The Neue Klasse platform launches in 2025, targeting 50% fully electric global sales by 2030. The company must manage a dual-track reality — maintaining profitability from legacy ICE operations while making massive investments in battery technology, software-defined vehicles, and direct-to-consumer models. The board is divided between traditionalists who want evolutionary change and progressives who believe BMW risks falling behind Tesla, BYD, and new Chinese competitors without revolutionary leadership."
   );
-  const [role, setRole] = useState<Role>("Chief Executive Officer");
-  const [timeHorizon, setTimeHorizon] = useState<TimeHorizon>(5);
-  const [candidates, setCandidates] = useState<CandidateInput[]>(DEFAULT_CANDIDATES);
-  const [evaluationCategories, setEvaluationCategories] = useState<string[]>([]);
-  const [configLoaded, setConfigLoaded] = useState(false);
+  const [role, setRole] = useState<string>(draft?.role ?? "Chief Executive Officer");
+  const [timeHorizon, setTimeHorizon] = useState<TimeHorizon>((draft?.timeHorizon ?? 5) as TimeHorizon);
+  const [candidates, setCandidates] = useState<CandidateInput[]>(draft?.candidates ?? DEFAULT_CANDIDATES);
+  const [configLoaded, setConfigLoaded] = useState(draft?.configLoaded ?? false);
+
+  // Persist draft on every change
+  useEffect(() => {
+    saveDraft({ companySituation, role, timeHorizon, candidates, configLoaded });
+  }, [companySituation, role, timeHorizon, candidates, configLoaded]);
 
   const canRun = candidates.length >= 2 && candidates.every(c => c.name.trim() && c.referenceText.trim().length > 20);
 
@@ -37,12 +71,11 @@ const InputPage = () => {
     sessionStorage.setItem("futureproof_input", JSON.stringify({
       role,
       timeHorizon,
-      transitionContext: "Full EV Transition" as TransitionContext,
+      transitionContext: "Custom" as TransitionContext,
       customContext: companySituation,
       companySituation,
       cSuiteContext: "",
       candidates,
-      evaluationCategories: evaluationCategories.length > 0 ? evaluationCategories : undefined,
     }));
     navigate("/analysis");
   };
@@ -55,7 +88,7 @@ const InputPage = () => {
 
   const addCandidate = () => {
     const color = CANDIDATE_COLORS[candidates.length % CANDIDATE_COLORS.length];
-    setCandidates([...candidates, { name: "", title: "CEO Candidate", color, referenceText: "" }]);
+    setCandidates([...candidates, { name: "", title: "Candidate", color, referenceText: "" }]);
   };
 
   const removeCandidate = (index: number) => {
@@ -63,24 +96,37 @@ const InputPage = () => {
     setCandidates(candidates.filter((_, i) => i !== index));
   };
 
+  const syncEvalCategoriesToDb = useCallback(async (categories: string[]) => {
+    // Delete all existing competencies and replace with CSV ones
+    for (const existing of competencies) {
+      try { await deleteCompetency.mutateAsync(existing); } catch { /* skip */ }
+    }
+    for (const cat of categories) {
+      try { await addCompetency.mutateAsync(cat); } catch { /* skip duplicates */ }
+    }
+  }, [competencies, deleteCompetency, addCompetency]);
+
+  const syncRoleToDb = useCallback(async (csvRole: string) => {
+    // Add the role if it doesn't exist
+    const exists = roles.some(r => r.toLowerCase() === csvRole.toLowerCase());
+    if (!exists) {
+      try { await addRole.mutateAsync(csvRole); } catch { /* skip */ }
+    }
+  }, [roles, addRole]);
+
   const handleConfigUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
         const text = ev.target?.result as string;
         const config = parseConfigCsv(text);
 
         if (config.situation) setCompanySituation(config.situation);
         if (config.role) {
-          // Match against available roles (case-insensitive, partial match both ways)
-          const matchedRole = roles.find(r =>
-            r.toLowerCase().includes(config.role.toLowerCase()) ||
-            config.role.toLowerCase().includes(r.toLowerCase())
-          );
-          if (matchedRole) setRole(matchedRole as Role);
-          else setRole(config.role as Role);
+          setRole(config.role);
+          await syncRoleToDb(config.role);
         }
         if (config.timeHorizon) {
           const th = config.timeHorizon;
@@ -93,7 +139,7 @@ const InputPage = () => {
           setCandidates(config.candidates);
         }
         if (config.evaluationCategories.length > 0) {
-          setEvaluationCategories(config.evaluationCategories);
+          await syncEvalCategoriesToDb(config.evaluationCategories);
         }
         setConfigLoaded(true);
         toast.success(`Configuration loaded — ${config.candidates.length} candidates, ${config.evaluationCategories.length} evaluation categories`);
@@ -104,6 +150,9 @@ const InputPage = () => {
     reader.readAsText(file);
     if (configFileRef.current) configFileRef.current.value = "";
   };
+
+  // Combine DB roles with current role for the dropdown
+  const allRoles = roles.includes(role) ? roles : [role, ...roles];
 
   return (
     <div className="min-h-screen bg-background">
@@ -141,7 +190,7 @@ const InputPage = () => {
               Strategic leadership evaluation for the BMW Group's next generation of leaders in the Neue Klasse era.
             </p>
 
-            {/* Upload Configuration CSV — prominent hero CTA */}
+            {/* Upload Configuration CSV */}
             <div className="flex items-center gap-3 pt-2">
               <Button
                 onClick={() => configFileRef.current?.click()}
@@ -161,13 +210,13 @@ const InputPage = () => {
                   </TooltipTrigger>
                   <TooltipContent side="right" className="max-w-xs text-xs leading-relaxed p-3">
                     <p className="font-semibold mb-1">Configuration CSV Format</p>
-                    <p className="text-muted-foreground mb-2">Upload a CSV with <strong>field</strong> and <strong>value</strong> columns:</p>
+                    <p className="text-muted-foreground mb-2">Upload a CSV with <strong>FIELD</strong> and <strong>VALUE</strong> columns:</p>
                     <ul className="space-y-0.5 text-muted-foreground list-disc pl-3">
                       <li><strong>situation</strong> — Company context</li>
                       <li><strong>role</strong> — Role being hired</li>
                       <li><strong>strategic_horizon</strong> — Years (1, 3, or 5)</li>
-                      <li><strong>evaluation_*</strong> — Evaluation categories</li>
-                      <li><strong>candidate_Name</strong> — Candidate info</li>
+                      <li><strong>evaluation_category</strong> — One per row</li>
+                      <li><strong>candidate_name</strong> / <strong>candidate_profile</strong> — Paired rows</li>
                     </ul>
                   </TooltipContent>
                 </Tooltip>
@@ -210,10 +259,10 @@ const InputPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">Role Being Hired</label>
-              <Select value={role} onValueChange={v => setRole(v as Role)}>
+              <Select value={role} onValueChange={v => setRole(v)}>
                 <SelectTrigger className="bg-muted/50 border-border"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {roles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  {allRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
