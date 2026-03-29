@@ -57,13 +57,17 @@ export async function runForesightAgent(
   role: Role,
   transitionContext: TransitionContext,
   customContext: string,
-  timeHorizon: TimeHorizon
+  timeHorizon: TimeHorizon,
+  evaluationCategories?: string[]
 ): Promise<CompetencyForecast[]> {
   const contextText = transitionContext === "Custom" ? customContext :
     transitionContext === "Full EV Transition" ? (customContext || EV_SEED) :
     `Industry transition: ${transitionContext}. ${customContext || ""}`;
 
-  const competencies = await fetchCompetencies();
+  // Use CSV categories if provided, otherwise fall back to DB/defaults
+  const competencies = evaluationCategories && evaluationCategories.length > 0
+    ? evaluationCategories
+    : await fetchCompetencies();
 
   const result = await callAgent("foresight", {
     role,
@@ -80,8 +84,11 @@ export async function runProfileAgent(candidateIndex: number): Promise<Candidate
   return runProfileAgentCustom(candidate);
 }
 
-export async function runProfileAgentCustom(candidate: CandidateInput): Promise<CandidateProfile> {
-  const competencies = await fetchCompetencies();
+export async function runProfileAgentCustom(candidate: CandidateInput, evaluationCategories?: string[]): Promise<CandidateProfile> {
+  const competencies = evaluationCategories && evaluationCategories.length > 0
+    ? evaluationCategories
+    : await fetchCompetencies();
+
   const result = await callAgent("profile", {
     candidateName: candidate.name,
     referenceText: candidate.referenceText,
