@@ -27,16 +27,14 @@ const OutputPanel = ({ state }: Props) => {
 
   const hasForesight = state.industryForesight && state.industryForesight.length > 0;
   const hasTrajectories = state.trajectories && state.trajectories.length > 0;
-  const hasRecommendations = state.recommendations && state.recommendations.length > 0;
-  
+  const verdictReady = state.phase >= 5 || (state.recommendations && state.recommendations.length > 0);
 
   const isTabReady = (id: TabId) => {
     switch (id) {
       case "candidates": return true;
       case "competencies": return !!hasForesight;
       case "trajectories": return !!hasTrajectories;
-      
-      case "verdict": return !!hasRecommendations;
+      case "verdict": return !!verdictReady;
     }
   };
 
@@ -105,10 +103,10 @@ const OutputPanel = ({ state }: Props) => {
           )}
 
 
-          {activeTab === "verdict" && hasRecommendations && (
+          {activeTab === "verdict" && verdictReady && (
             <div className="space-y-6">
               <Recommendations
-                recommendations={state.recommendations}
+                recommendations={state.recommendations || []}
                 devilsAdvocate={state.devilsAdvocate}
                 keyInsight={state.keyInsight}
               />
