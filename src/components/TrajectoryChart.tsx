@@ -10,12 +10,10 @@ interface Props {
 }
 
 const buildTimeLabels = (horizon: TimeHorizon): string[] => {
-  const months = horizon * 12;
-  const labels = ["Hiring"];
-  for (let m = 6; m <= months; m += 6) {
-    if (m < 12) labels.push(`${m}M`);
-    else if (m % 12 === 0) labels.push(`Y${m / 12}`);
-    else labels.push(`Y${Math.floor(m / 12)}.5`);
+  // New agents return: Now, Y1, Y2, Y3, Y4, Y5
+  const labels = ["Now"];
+  for (let y = 1; y <= horizon; y++) {
+    labels.push(`Y${y}`);
   }
   return labels;
 };

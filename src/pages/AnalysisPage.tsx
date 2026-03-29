@@ -7,9 +7,9 @@ import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, ArrowLeft, Settings } from "lucide-react";
 import {
+  runContextAgent,
+  runCandidateAgent,
   runForesightAgent,
-  runProfileAgentCustom,
-  runTrajectoryAgent,
   runDecisionAgent,
 } from "@/lib/agents";
 import type {
@@ -36,10 +36,9 @@ const AnalysisPage = () => {
     teamPairings: null,
     agentReasoning: null,
     agentStatus: {
+      context: "idle",
+      candidate: "idle",
       foresight: "idle",
-      profile: "idle",
-      trajectory: "idle",
-      risk: "idle",
       decision: "idle",
     },
   });
@@ -54,61 +53,59 @@ const AnalysisPage = () => {
     }));
   };
 
-  const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
-
   const runAnalysis = useCallback(async (
-    role: Role, transitionContext: TransitionContext, customContext: string,
-    timeHorizon: TimeHorizon, cands: CandidateInput[], cSuiteContext: string
+    role: Role, _transitionContext: TransitionContext, customContext: string,
+    timeHorizon: TimeHorizon, cands: CandidateInput[], companySituation: string
   ) => {
     setIsRunning(true);
 
     try {
-      // Step 1: Context/Foresight Agent
+      // AGENT 1: Context Agent
+      updateStatus("context", "active");
+      const contextResult = await runContextAgent(role, companySituation || customContext, timeHorizon);
+      updateStatus("context", "complete");
+
+      // AGENT 2: Candidate Agent
+      updateStatus("candidate", "active");
+      const { profiles } = await runCandidateAgent(cands, companySituation || customContext, role);
+      setState(prev => ({ ...prev, candidateProfiles: profiles, phase: 3 }));
+      updateStatus("candidate", "complete");
+
+      // AGENT 3: Foresight Agent
       updateStatus("foresight", "active");
-      await delay(1500);
-      const forecasts = await runForesightAgent(role, transitionContext, customContext, timeHorizon);
-      setState(prev => ({ ...prev, industryForesight: forecasts }));
+      const { trajectories, forecasts } = await runForesightAgent(
+        companySituation || customContext, profiles, contextResult, timeHorizon
+      );
+      setState(prev => ({ ...prev, trajectories, industryForesight: forecasts }));
       updateStatus("foresight", "complete");
 
-      // Step 2: Candidate/Profile Agent
-      updateStatus("profile", "active");
-      await delay(1500);
-      const profiles = await Promise.all(cands.map(c => runProfileAgentCustom(c)));
-      setState(prev => ({ ...prev, candidateProfiles: profiles, phase: 3 }));
-      updateStatus("profile", "complete");
-
-      // Step 3: Trajectory Agent
-      updateStatus("trajectory", "active");
-      await delay(1500);
-      const trajectories = await Promise.all(
-        profiles.map(p => runTrajectoryAgent(p.name, p, forecasts))
-      );
-      setState(prev => ({ ...prev, trajectories }));
-      updateStatus("trajectory", "complete");
-
-      // Step 4: Risk Agent
-      updateStatus("risk", "active");
-      await delay(1500);
-      setState(prev => ({ ...prev, phase: 4 }));
-      updateStatus("risk", "complete");
-
-      // Step 5: Decision Agent
+      // AGENT 4: Decision Agent
       updateStatus("decision", "active");
-      await delay(1500);
-      const decision = await runDecisionAgent(trajectories, profiles, forecasts, timeHorizon);
+      const decision = await runDecisionAgent(
+        companySituation || customContext, profiles, trajectories, contextResult, timeHorizon
+      );
       setState(prev => ({
         ...prev,
         recommendations: decision.recommendations,
         devilsAdvocate: decision.devilsAdvocate,
         keyInsight: decision.keyInsight,
         agentReasoning: decision.agentReasoning || null,
+        teamPairings: decision.teamPairings || null,
         phase: 5,
       }));
       updateStatus("decision", "complete");
 
-      toast.success("Analysis complete", { description: "All agents have finished processing." });
+      toast.success("Analysis complete", { description: "All 4 agents have finished processing." });
     } catch (error) {
       console.error("Analysis failed:", error);
+      // Mark current active agent as error
+      setState(prev => {
+        const updated = { ...prev.agentStatus };
+        for (const key of Object.keys(updated)) {
+          if (updated[key] === "active") updated[key] = "error";
+        }
+        return { ...prev, agentStatus: updated };
+      });
       toast.error("Analysis error", {
         description: error instanceof Error ? error.message : "An unexpected error occurred.",
       });
@@ -136,7 +133,10 @@ const AnalysisPage = () => {
       companySituation: input.companySituation || "",
       cSuiteContext: input.cSuiteContext || "",
     }));
-    runAnalysis(input.role, input.transitionContext, input.customContext, input.timeHorizon, input.candidates, input.cSuiteContext || "");
+    runAnalysis(
+      input.role, input.transitionContext, input.customContext,
+      input.timeHorizon, input.candidates, input.companySituation || ""
+    );
   }, [navigate, runAnalysis, hasStarted]);
 
   return (
@@ -144,7 +144,7 @@ const AnalysisPage = () => {
       <AppHeader
         right={
           <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-lg">
+            <div className="hidden md:flex items-center gap-2 text-xs text-white/60 bg-white/10 px-3 py-1.5 rounded-lg">
               <Settings className="w-3 h-3" />
               {state.role} · {state.timeHorizon}Y
             </div>
@@ -152,7 +152,7 @@ const AnalysisPage = () => {
               variant="outline"
               size="sm"
               onClick={() => navigate("/")}
-              className="gap-1.5 text-xs"
+              className="gap-1.5 text-xs border-white/20 text-white/80 hover:bg-white/10 bg-transparent"
             >
               <ArrowLeft className="w-3 h-3" /> Edit Inputs
             </Button>
@@ -166,7 +166,7 @@ const AnalysisPage = () => {
           <div className="flex items-center gap-2 mb-3">
             <div className={`w-1.5 h-1.5 rounded-full ${isRunning ? "bg-primary animate-pulse" : "bg-emerald-500"}`} />
             <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
-              {isRunning ? "Processing…" : "Pipeline Complete"}
+              {isRunning ? "Gemini AI Processing…" : "Pipeline Complete"}
             </span>
           </div>
           <AgentPipeline status={state.agentStatus} />
