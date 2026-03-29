@@ -6,10 +6,11 @@ interface AgentPipelineProps {
 }
 
 const AGENTS = [
-  { key: "context", label: "Context Agent", description: "Analysing company situation & leadership needs" },
-  { key: "candidate", label: "Candidate Agent", description: "Profiling candidates & scoring competencies" },
-  { key: "foresight", label: "Foresight Agent", description: "Predicting strategic fit trajectories" },
-  { key: "decision", label: "Decision Agent", description: "Synthesizing recommendations & team fit" },
+  { key: "foresight", label: "Context Agent", description: "Analysing organisational mandate" },
+  { key: "profile", label: "Candidate Agent", description: "Profiling leadership archetypes" },
+  { key: "trajectory", label: "Foresight Agent", description: "Modelling trajectory over time" },
+  { key: "risk", label: "Risk Agent", description: "Evaluating transition risks" },
+  { key: "decision", label: "Decision Agent", description: "Generating conditional recommendation" },
 ];
 
 const AgentPipeline = ({ status }: AgentPipelineProps) => {
@@ -26,7 +27,6 @@ const AgentPipeline = ({ status }: AgentPipelineProps) => {
             className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-500 ${
               s === "active" ? "bg-primary/8 border border-primary/20" :
               s === "complete" ? "bg-emerald-50 border border-emerald-200" :
-              s === "error" ? "bg-red-50 border border-red-200" :
               "bg-muted/40 border border-transparent"
             }`}
           >
@@ -45,26 +45,25 @@ const AgentPipeline = ({ status }: AgentPipelineProps) => {
             <div className="flex-1 min-w-0">
               <span className={`text-sm font-medium ${
                 s === "active" ? "text-primary" :
-                s === "complete" ? "text-emerald-700" :
-                s === "error" ? "text-red-600" : "text-muted-foreground"
+                s === "complete" ? "text-emerald-700" : "text-muted-foreground"
               }`}>
                 {agent.label}
               </span>
               <AnimatePresence>
-                {(s === "active" || s === "complete" || s === "error") && (
+                {(s === "active" || s === "complete") && (
                   <motion.p
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
-                    className={`text-xs ${
-                      s === "complete" ? "text-emerald-600" :
-                      s === "error" ? "text-red-500" : "text-muted-foreground"
-                    }`}
+                    className={`text-xs ${s === "complete" ? "text-emerald-600" : "text-muted-foreground"}`}
                   >
-                    {s === "active" ? agent.description + "…" : s === "error" ? "Failed — see error" : "Complete ✓"}
+                    {s === "active" ? agent.description + "…" : "Complete ✓"}
                   </motion.p>
                 )}
               </AnimatePresence>
             </div>
+            {i < AGENTS.length - 1 && s === "complete" && (
+              <div className="w-px h-4 bg-emerald-300 absolute left-[1.25rem] bottom-0 translate-y-full" />
+            )}
           </motion.div>
         );
       })}

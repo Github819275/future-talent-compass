@@ -28,10 +28,10 @@ const CompetencyHeatmap = ({ forecasts, candidates }: Props) => {
   // Derive time points from the first forecast's score keys
   const scoreKeys = forecasts.length > 0 ? Object.keys(forecasts[0].scores) : [];
   const keyToLabel: Record<string, string> = {
-    hiring: "Now", now: "Now",
-    "6m": "6M", "1y": "Y1", "1.5y": "Y1.5", "2y": "Y2", "2.5y": "Y2.5",
+    hiring: "Hiring", "6m": "6M", "1y": "Y1", "1.5y": "Y1.5", "2y": "Y2", "2.5y": "Y2.5",
     "3y": "Y3", "3.5y": "Y3.5", "4y": "Y4", "4.5y": "Y4.5", "5y": "Y5",
-    y1: "Y1", y2: "Y2", y3: "Y3", y4: "Y4", y5: "Y5",
+    // fallbacks for old format
+    year1: "Y1", year3: "Y3", year5: "Y5",
   };
   const timePoints = scoreKeys.map(k => keyToLabel[k] || k);
 

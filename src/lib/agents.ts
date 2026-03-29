@@ -3,39 +3,44 @@ import type {
   CompetencyForecast, CandidateProfile, CandidateTrajectory, Recommendation,
   CandidateInput, TeamPairing, AgentReasoning,
 } from "@/lib/types";
-import { COMPETENCIES } from "@/lib/types";
+import { CANDIDATES, COMPETENCIES } from "@/lib/types";
 import { supabase } from "@/integrations/supabase/client";
+
+const EV_SEED = `BMW Group has publicly committed to making 50% of global sales fully electric by 2030. The Neue Klasse platform launching in 2025 marks the beginning of a full architectural shift away from combustion-based platforms. The company must manage a dual-track reality for approximately 3-5 years. Battery technology, power electronics, software-defined vehicle control, and direct-to-consumer models are the growth domains.`;
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-async function callAgent(agentType: string, payload: any): Promise<any> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 180000);
+async function callAgent(agentType: string, payload: any, retries = 2): Promise<any> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 120000);
 
-  try {
-    const response = await fetch(`${SUPABASE_URL}/functions/v1/futureproof-agent`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "apikey": SUPABASE_KEY,
-      },
-      body: JSON.stringify({ agentType, payload }),
-      signal: controller.signal,
-    });
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/futureproof-agent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "apikey": SUPABASE_KEY,
+        },
+        body: JSON.stringify({ agentType, payload }),
+        signal: controller.signal,
+      });
 
-    clearTimeout(timeout);
+      clearTimeout(timeout);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Agent ${agentType} returned ${response.status}: ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Agent ${agentType} returned ${response.status}: ${errorText}`);
+      }
+
+      return await response.json();
+    } catch (err) {
+      if (attempt === retries) throw err;
+      console.warn(`Agent ${agentType} attempt ${attempt + 1} failed, retrying...`, err);
+      await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
     }
-
-    return await response.json();
-  } catch (err) {
-    clearTimeout(timeout);
-    throw err;
   }
 }
 
@@ -48,128 +53,81 @@ async function fetchCompetencies(): Promise<string[]> {
   return data.map((c: any) => c.name);
 }
 
-// AGENT 1: Context Agent
-export async function runContextAgent(
-  role: Role,
-  companySituation: string,
-  timeHorizon: TimeHorizon
-): Promise<any> {
-  return callAgent("context", {
-    role,
-    companySituation,
-    timeHorizon,
-  });
-}
-
-// AGENT 2: Candidate Agent
-export async function runCandidateAgent(
-  candidates: CandidateInput[],
-  companySituation: string,
-  role: Role
-): Promise<{ profiles: CandidateProfile[] }> {
-  const competencies = await fetchCompetencies();
-
-  const result = await callAgent("candidate", {
-    candidates: candidates.map(c => ({
-      name: c.name,
-      title: c.title,
-      referenceText: c.referenceText,
-    })),
-    competencies,
-    companySituation,
-    role,
-  });
-
-  const profiles: CandidateProfile[] = (result.candidates || []).map((c: any, i: number) => ({
-    name: c.name,
-    title: candidates[i]?.title || "Candidate",
-    archetype: c.archetype || "Unknown",
-    archetypeDescription: c.archetypeDescription || "",
-    skills: c.skills || [],
-    color: candidates[i]?.color || "#60A5FA",
-    scores: c.scores || {},
-  }));
-
-  return { profiles };
-}
-
-// AGENT 3: Foresight Agent
 export async function runForesightAgent(
-  companySituation: string,
-  profiles: CandidateProfile[],
-  contextResult: any,
+  role: Role,
+  transitionContext: TransitionContext,
+  customContext: string,
   timeHorizon: TimeHorizon
-): Promise<{ trajectories: CandidateTrajectory[]; forecasts: CompetencyForecast[] }> {
+): Promise<CompetencyForecast[]> {
+  const contextText = transitionContext === "Custom" ? customContext :
+    transitionContext === "Full EV Transition" ? (customContext || EV_SEED) :
+    `Industry transition: ${transitionContext}. ${customContext || ""}`;
+
   const competencies = await fetchCompetencies();
 
   const result = await callAgent("foresight", {
-    companySituation,
-    candidates: profiles.map(p => ({
-      name: p.name,
-      archetype: p.archetype,
-      skills: p.skills,
-    })),
-    contextAnalysis: contextResult,
-    competencies,
+    role,
+    transitionContext: contextText,
     timeHorizon,
+    competencies,
   });
 
-  const trajectories: CandidateTrajectory[] = (result.trajectories || []).map((t: any) => ({
-    candidateName: t.candidateName,
-    points: t.points || [],
-    crossingPoints: [],
-    appreciatingSkills: t.appreciatingSkills || [],
-    depreciatingSkills: t.depreciatingSkills || [],
-  }));
-
-  // Map forecast score keys to standard format
-  const forecasts: CompetencyForecast[] = (result.forecasts || []).map((f: any) => {
-    const rawScores = f.scores || {};
-    // Normalize keys to standard format
-    const scores: Record<string, number> = {};
-    const keyMap: Record<string, string> = {
-      now: "hiring", y1: "1y", y2: "2y", y3: "3y", y4: "4y", y5: "5y",
-      hiring: "hiring", "1y": "1y", "2y": "2y", "3y": "3y", "4y": "4y", "5y": "5y",
-    };
-    for (const [k, v] of Object.entries(rawScores)) {
-      const mapped = keyMap[k] || k;
-      scores[mapped] = v as number;
-    }
-    return {
-      competency: f.competency,
-      scores,
-      trend: f.trend || "stable",
-      reasoning: f.reasoning || "",
-    };
-  });
-
-  return { trajectories, forecasts };
+  return result.forecasts || [];
 }
 
-// AGENT 4: Decision Agent
+export async function runProfileAgent(candidateIndex: number): Promise<CandidateProfile> {
+  const candidate = CANDIDATES[candidateIndex];
+  return runProfileAgentCustom(candidate);
+}
+
+export async function runProfileAgentCustom(candidate: CandidateInput): Promise<CandidateProfile> {
+  const competencies = await fetchCompetencies();
+  const result = await callAgent("profile", {
+    candidateName: candidate.name,
+    referenceText: candidate.referenceText,
+    competencies,
+  });
+
+  return {
+    name: candidate.name,
+    title: candidate.title,
+    color: candidate.color,
+    archetype: result.archetype || "Unknown",
+    archetypeDescription: result.archetypeDescription || "",
+    skills: result.skills || [],
+  };
+}
+
+export async function runTrajectoryAgent(
+  candidateName: string,
+  profile: CandidateProfile,
+  forecasts: CompetencyForecast[]
+): Promise<CandidateTrajectory> {
+  const result = await callAgent("trajectory", {
+    candidateName,
+    skills: profile.skills,
+    forecasts,
+  });
+
+  return {
+    candidateName,
+    points: result.points || [],
+    crossingPoints: [],
+    appreciatingSkills: result.appreciatingSkills || [],
+    depreciatingSkills: result.depreciatingSkills || [],
+  };
+}
+
 export async function runDecisionAgent(
-  companySituation: string,
-  profiles: CandidateProfile[],
   trajectories: CandidateTrajectory[],
-  contextResult: any,
+  profiles: CandidateProfile[],
+  forecasts: CompetencyForecast[],
   timeHorizon: TimeHorizon
-): Promise<{
-  recommendations: Recommendation[];
-  devilsAdvocate: string;
-  keyInsight: string;
-  agentReasoning: AgentReasoning[];
-  teamPairings: TeamPairing[];
-}> {
+): Promise<{ recommendations: Recommendation[]; devilsAdvocate: string; keyInsight: string; agentReasoning: AgentReasoning[] }> {
   const result = await callAgent("decision", {
-    companySituation,
-    candidates: profiles.map(p => ({
-      name: p.name,
-      archetype: p.archetype,
-      archetypeDescription: p.archetypeDescription,
-      skills: p.skills,
-    })),
     trajectories,
-    contextAnalysis: contextResult,
+    profiles: profiles.map(p => ({ name: p.name, archetype: p.archetype, skills: p.skills })),
+    forecasts,
     timeHorizon,
   });
 
@@ -178,6 +136,17 @@ export async function runDecisionAgent(
     devilsAdvocate: result.devilsAdvocate || "",
     keyInsight: result.keyInsight || "",
     agentReasoning: result.agentReasoning || [],
-    teamPairings: result.teamPairings || [],
   };
+}
+
+export async function runTeamCompatibilityAgent(
+  profiles: CandidateProfile[],
+  cSuiteContext: string
+): Promise<TeamPairing[]> {
+  const result = await callAgent("teamCompatibility", {
+    candidates: profiles.map(p => ({ name: p.name, archetype: p.archetype, archetypeDescription: p.archetypeDescription })),
+    cSuiteContext,
+  });
+
+  return result.pairings || [];
 }
