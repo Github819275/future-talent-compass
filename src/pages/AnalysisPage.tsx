@@ -109,9 +109,16 @@ const AnalysisPage = () => {
       toast.success("Analysis complete", { description: "All agents have finished processing." });
     } catch (error) {
       console.error("Analysis failed:", error);
+      const description = error instanceof Error ? error.message : "An unexpected error occurred.";
       toast.error("Analysis error", {
-        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+        description,
       });
+
+      updateStatus("foresight", "error");
+      updateStatus("profile", "error");
+      updateStatus("trajectory", "error");
+      updateStatus("risk", "error");
+      updateStatus("decision", "error");
     } finally {
       setIsRunning(false);
     }
