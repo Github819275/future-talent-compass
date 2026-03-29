@@ -1,112 +1,198 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+
+async function callGemini(systemPrompt: string, userPrompt: string): Promise<string> {
+  if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [
+        { role: "user", parts: [{ text: `${systemPrompt}\n\n---\n\n${userPrompt}` }] }
+      ],
+      generationConfig: {
+        temperature: 0.7,
+        responseMimeType: "application/json",
       },
-    });
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    console.error("Gemini API error:", response.status, err);
+    throw new Error(`Gemini API error ${response.status}: ${err}`);
   }
 
-  const { agentType, payload } = await req.json();
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("No content in Gemini response");
+  return text;
+}
 
-  const systemPrompts: Record<string, string> = {
-    foresight: `You are the Industry Foresight Agent for a strategic C-suite hiring tool. You analyze how competency requirements for a specific role will evolve over time given industry transitions.
+function parseJSON(text: string): any {
+  // Try direct parse first
+  try { return JSON.parse(text); } catch {}
+  // Try extracting from markdown code block
+  const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (match) {
+    try { return JSON.parse(match[1].trim()); } catch {}
+  }
+  // Try finding first { to last }
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start !== -1 && end !== -1) {
+    try { return JSON.parse(text.slice(start, end + 1)); } catch {}
+  }
+  throw new Error("Failed to parse JSON from Gemini response");
+}
 
-The payload includes a "timeHorizon" (1, 3, or 5 years). You must produce scores at 6-month intervals from hiring up to the horizon.
+const systemPrompts: Record<string, string> = {
+  context: `You are the Context Agent for a strategic C-suite hiring intelligence platform at BMW Group.
 
-You must return a JSON object with this exact structure:
+Analyze the company situation and role being hired for. Return what leadership archetype is needed NOW vs in 5 years.
+
+Return JSON:
 {
-  "forecasts": [
+  "currentArchetype": {
+    "name": "string - 2-4 word label (e.g. 'Operational Stabilizer', 'Transformation Catalyst')",
+    "description": "2-3 sentences describing why this archetype is needed now",
+    "keyTraits": ["trait1", "trait2", "trait3", "trait4"]
+  },
+  "futureArchetype": {
+    "name": "string - 2-4 word label for what's needed in 5 years",
+    "description": "2-3 sentences describing why this archetype will be needed",
+    "keyTraits": ["trait1", "trait2", "trait3", "trait4"]
+  },
+  "strategicContext": "2-3 sentences summarizing the key tension between current and future needs",
+  "industryShifts": ["shift1", "shift2", "shift3"]
+}`,
+
+  candidate: `You are the Candidate Agent for a strategic C-suite hiring intelligence platform.
+
+For EACH candidate provided, analyze their profile and assign:
+- A leadership archetype: one of "Stability", "Transformation", or "Strategic"
+- Scores on 4 dimensions (0-100): transformation_readiness, operational_depth, adaptability, cultural_alignment
+
+Also provide a detailed competency profile against the provided competency list.
+
+Return JSON:
+{
+  "candidates": [
     {
-      "competency": "string - the competency name",
-      "scores": { "hiring": number, "6m": number, "1y": number, "1.5y": number, "2y": number, ... up to the horizon in 6-month steps },
-      "trend": "appreciating" | "stable" | "depreciating",
-      "reasoning": "string - 1-2 sentences explaining the forecast"
+      "name": "candidate name",
+      "archetype": "Stability" | "Transformation" | "Strategic",
+      "archetypeDescription": "1-2 sentences explaining why this archetype fits",
+      "scores": {
+        "transformation_readiness": number 0-100,
+        "operational_depth": number 0-100,
+        "adaptability": number 0-100,
+        "cultural_alignment": number 0-100
+      },
+      "skills": [
+        {
+          "competency": "must match one of the provided competency names exactly",
+          "level": "Core" | "Developed" | "Emerging",
+          "confidence": 0.0 to 1.0,
+          "reasoning": "1 sentence evidence from the reference text"
+        }
+      ]
     }
   ]
 }
 
-The score keys MUST be: "hiring", "6m", "1y", "1.5y", "2y", "2.5y", "3y", "3.5y", "4y", "4.5y", "5y" — include only up to the given time horizon.
+Be honest about weaknesses. If the reference text shows no evidence for a competency, rate it as "Emerging" with low confidence. Every candidate must have at least 2-3 "Emerging" competencies. Make the scores reflect REAL differences between candidates.`,
+
+  foresight: `You are the Foresight Agent for a strategic C-suite hiring intelligence platform.
+
+Based on the company situation and candidate profiles, predict strategic fit scores for each candidate at: Now, Year 1, Year 2, Year 3, Year 4, Year 5.
 
 CRITICAL SCORING RULES:
-- Scores represent IMPORTANCE of that competency (0=irrelevant, 100=critical).
-- Produce a WIDE RANGE. Some competencies MUST score low (10-30), others high (75-95).
-- Traditional/legacy skills should START high and DROP over time if there's a transition.
-- Emerging/future skills should START low and RISE.
-- Soft skills should be MODERATE and STABLE (45-65).
-- At least 2-3 competencies MUST be "depreciating", at least 2-3 "appreciating".
-- Average across all competencies at any time point should be ~45-55, NOT 70+.`,
+- Scores represent overall strategic fit (0-100)
+- One candidate who is strong in legacy/operational skills MUST start HIGH (70-85) and DECLINE over 5 years to (40-55)
+- One candidate who is strong in transformation/future skills MUST start LOWER (45-60) and RISE SHARPLY to (75-90)
+- Their trajectories MUST CROSS around Year 2-3
+- A third/strategic candidate should follow a moderate, relatively stable path (55-70 range)
+- Generate optimistic (+8-15) and pessimistic (-8-15) bands for each point
 
-    profile: `You are the Candidate Profiling Agent. Given a candidate's name and reference text, extract their competency profile.
+Also predict competency importance evolution over time for the provided competencies.
 
 Return JSON:
 {
-  "archetype": "a 2-4 word archetype label (e.g. 'Legacy Domain Expert', 'Transformation Native', 'Strategic Bridge Builder')",
-  "archetypeDescription": "1-2 sentences describing this archetype",
-  "skills": [
+  "trajectories": [
     {
-      "competency": "must match one of the provided competency names exactly",
-      "level": "Core" | "Developed" | "Emerging",
-      "confidence": 0.0 to 1.0,
-      "reasoning": "1 sentence evidence from the reference text"
+      "candidateName": "name",
+      "points": [
+        { "time": "Now", "score": number, "optimistic": number, "pessimistic": number },
+        { "time": "Y1", "score": number, "optimistic": number, "pessimistic": number },
+        { "time": "Y2", "score": number, "optimistic": number, "pessimistic": number },
+        { "time": "Y3", "score": number, "optimistic": number, "pessimistic": number },
+        { "time": "Y4", "score": number, "optimistic": number, "pessimistic": number },
+        { "time": "Y5", "score": number, "optimistic": number, "pessimistic": number }
+      ],
+      "appreciatingSkills": ["skill names gaining value"],
+      "depreciatingSkills": ["skill names losing value"]
+    }
+  ],
+  "forecasts": [
+    {
+      "competency": "competency name",
+      "scores": { "now": number, "y1": number, "y2": number, "y3": number, "y4": number, "y5": number },
+      "trend": "appreciating" | "stable" | "depreciating",
+      "reasoning": "1-2 sentences explaining the forecast"
     }
   ]
-}
+}`,
 
-Be honest about weaknesses. If the reference text shows no evidence for a competency, rate it as "Emerging" with low confidence. Every candidate must have at least 2-3 "Emerging" competencies.`,
+  decision: `You are the Decision Agent for a strategic C-suite hiring intelligence platform.
 
-    trajectory: `You are the Trajectory Agent. Given industry foresight data and a candidate's skill profile, calculate their fit score at EVERY time point provided in the foresight data (6-month intervals).
+Synthesize ALL previous analysis (context, candidate profiles, trajectories) and produce:
 
-Core skills count 1.0x, Developed 0.7x, Emerging 0.4x. Match candidate skills against competency importance at each time point. Also generate optimistic (+10-15%) and pessimistic (-10-15%) scenarios.
-
-IMPORTANT: Scores should reflect REAL differences between candidates. A legacy expert should score HIGH at hiring but DROP over time. A future-native should score LOWER at hiring but RISE. Make the trajectories cross if appropriate.
-
-Return JSON:
-{
-  "points": [
-    { "time": "Hiring", "score": number, "optimistic": number, "pessimistic": number },
-    { "time": "6M", "score": number, "optimistic": number, "pessimistic": number },
-    { "time": "Y1", "score": number, "optimistic": number, "pessimistic": number },
-    ... one entry for each 6-month interval up to the horizon
-  ],
-  "appreciatingSkills": ["skill names that are gaining value"],
-  "depreciatingSkills": ["skill names that are losing value"],
-  "crossingAnalysis": "string - brief analysis of trajectory direction"
-}
-
-IMPORTANT: You MUST produce a "points" entry for EVERY 6-month interval that appears in the foresight scores. Match the time labels exactly.`,
-
-    risk: `You are the Risk Analysis Agent. Given a candidate's trajectory data, identify key risks and validate the confidence bands.
-Return the same trajectory format with refined confidence bands.`,
-
-    decision: `You are the Decision Agent. Given all trajectory data for all candidates, produce conditional recommendations.
+1. Short term hire (best for next 12 months) with detailed reasoning
+2. Long term hire (best for 5 year horizon) with detailed reasoning
+3. Hybrid path (hire X now, transition to Y in 18-24 months) with detailed reasoning
+4. Team compatibility analysis for each candidate with existing C-suite
 
 Return JSON:
 {
   "recommendations": [
     {
-      "horizon": "If your horizon is now to 12 months",
+      "horizon": "Short Term (0-12 months)",
       "candidate": "candidate name",
-      "rationale": "1 paragraph",
-      "risk": "key risk statement"
-    },
-    {
-      "horizon": "If your horizon is 3 to 5 years",
-      "candidate": "candidate name",
-      "rationale": "1 paragraph",
-      "risk": "key risk statement"
-    },
-    {
-      "horizon": "The hybrid path",
-      "candidate": "combined approach",
-      "rationale": "1 paragraph",
+      "rationale": "1 detailed paragraph explaining why",
       "risk": "key risk statement",
-      "developmentPlan": "specific development plan"
+      "developmentPlan": null
+    },
+    {
+      "horizon": "Long Term (3-5 years)",
+      "candidate": "candidate name",
+      "rationale": "1 detailed paragraph explaining why",
+      "risk": "key risk statement",
+      "developmentPlan": null
+    },
+    {
+      "horizon": "Hybrid Path",
+      "candidate": "combined approach description",
+      "rationale": "1 detailed paragraph explaining the transition strategy",
+      "risk": "key risk statement",
+      "developmentPlan": "specific 18-24 month transition plan"
+    }
+  ],
+  "teamPairings": [
+    {
+      "candidate": "candidate name",
+      "cSuiteMember": "C-suite member name or role",
+      "cSuiteRole": "their role",
+      "compatibility": "strong" | "risk",
+      "reasoning": "One sentence explaining the pairing dynamic"
     }
   ],
   "devilsAdvocate": "A clear, definitive 2-sentence final verdict. First sentence: state the single best hiring decision and why. Second sentence: state the critical condition or risk to watch.",
@@ -124,7 +210,7 @@ Return JSON:
     },
     {
       "agentName": "Foresight Agent",
-      "conclusion": "1-2 sentences on the most important competency shifts",
+      "conclusion": "1-2 sentences on the most important trajectory shifts",
       "keyFactors": ["factor 1", "factor 2", "factor 3"]
     },
     {
@@ -133,65 +219,40 @@ Return JSON:
       "keyFactors": ["factor 1", "factor 2", "factor 3"]
     }
   ]
-}`,
+}`
+};
 
-    teamCompatibility: `You are the Team Compatibility Agent. Given candidate profiles and the existing C-Suite context, analyze how each candidate would pair with each existing C-suite member.
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
 
-Return JSON:
-{
-  "pairings": [
-    {
-      "candidate": "candidate name",
-      "cSuiteMember": "C-suite member name or title",
-      "cSuiteRole": "their role",
-      "compatibility": "strong" | "risk",
-      "reasoning": "One sentence explaining the pairing dynamic — be specific about WHY it works or doesn't"
+  try {
+    const { agentType, payload } = await req.json();
+
+    const systemPrompt = systemPrompts[agentType];
+    if (!systemPrompt) {
+      return new Response(JSON.stringify({ error: `Unknown agent type: ${agentType}` }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-  ]
-}
 
-Generate 2-3 pairings per candidate. Mix of strong and risk pairings. Be specific and insightful — explain the dynamic, not just "good fit" or "bad fit". Example: "Visionary CEO + operational COO — classic transformation pairing that provides execution backbone" or "Both legacy-oriented — creates transformation gap risk with no one championing the new paradigm".`
-  };
+    console.log(`Running agent: ${agentType}`);
+    const rawText = await callGemini(systemPrompt, JSON.stringify(payload));
+    const parsed = parseJSON(rawText);
+    console.log(`Agent ${agentType} complete`);
 
-  const systemPrompt = systemPrompts[agentType];
-  if (!systemPrompt) throw new Error(`Unknown agent type: ${agentType}`);
+    return new Response(JSON.stringify(parsed), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("Agent error:", e);
+    const message = e instanceof Error ? e.message : "Unknown error";
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: JSON.stringify(payload) },
-      ],
-      temperature: 0.7,
-      response_format: { type: "json_object" },
-    }),
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    return new Response(JSON.stringify({ error: err }), {
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content;
-
-  let parsed;
-  try {
-    parsed = JSON.parse(content);
-  } catch {
-    parsed = { raw: content };
-  }
-
-  return new Response(JSON.stringify(parsed), {
-    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-  });
 });
