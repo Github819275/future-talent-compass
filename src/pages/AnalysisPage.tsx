@@ -78,12 +78,10 @@ const AnalysisPage = () => {
       setState(prev => ({ ...prev, candidateProfiles: profiles, phase: 3 }));
       updateStatus("profile", "complete");
 
-      // Step 3: Trajectory Agent
+      // Step 3: Trajectory (deterministic math — no AI call)
       updateStatus("trajectory", "active");
-      await delay(1500);
-      const trajectories = await Promise.all(
-        profiles.map(p => runTrajectoryAgent(p.name, p, forecasts))
-      );
+      await delay(500);
+      const trajectories = profiles.map(p => calculateTrajectory(p.name, p, forecasts));
       setState(prev => ({ ...prev, trajectories }));
       updateStatus("trajectory", "complete");
 
