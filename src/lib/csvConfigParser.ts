@@ -16,22 +16,26 @@ export function parseConfigCsv(text: string): ParsedConfig {
   const fieldIdx = header.findIndex(h => h === "field");
   const valueIdx = header.findIndex(h => h === "value");
   if (fieldIdx === -1 || valueIdx === -1) {
-    throw new Error("CSV must have 'field' and 'value' columns.");
+    throw new Error("CSV must have 'FIELD' and 'VALUE' columns.");
   }
 
   let situation = "";
   let role = "";
   let timeHorizon = 5;
   const evaluationCategories: string[] = [];
-  const candidateMap = new Map<string, { name: string; text: string }>();
+
+  // For candidates: collect names and profiles in order, then pair them
+  const candidateNames: string[] = [];
+  const candidateProfiles: string[] = [];
 
   for (let i = 1; i < lines.length; i++) {
-    // Smart CSV split: handle commas inside quoted values
     const row = smartSplit(lines[i]);
     const field = row[fieldIdx]?.replace(/^["']|["']$/g, "").trim().toLowerCase() || "";
-    const value = row[valueIdx]?.replace(/^["']|["']$/g, "").trim() || "";
-    
-    // Also grab everything after the value column as it might be part of the value (unquoted commas)
+    // Rejoin everything after the first comma as the value (handles commas in text)
+    const rawLine = lines[i];
+    const firstCommaIdx = rawLine.indexOf(",");
+    const value = firstCommaIdx >= 0 ? rawLine.substring(firstCommaIdx + 1).trim() : "";
+
     if (!field || !value) continue;
 
     if (field === "situation") {
@@ -39,36 +43,27 @@ export function parseConfigCsv(text: string): ParsedConfig {
     } else if (field === "role") {
       role = value;
     } else if (field === "strategic_horizon" || field === "strategichorizon" || field === "time_horizon") {
-      const num = parseInt(value);
-      if (!isNaN(num)) timeHorizon = num;
-    } else if (field.startsWith("evaluation")) {
+      const match = value.match(/(\d+)/);
+      if (match) timeHorizon = parseInt(match[1]);
+    } else if (field === "evaluation_category" || field.startsWith("evaluation")) {
       evaluationCategories.push(value);
-    } else if (field.startsWith("candidate")) {
-      // Extract candidate name from field like "candidate_Klaus Bergmann" or "candidate_name"
-      const suffix = field.replace(/^candidate_?/, "").trim();
-      
-      // Check if this is a named candidate entry (candidate_Name format with value as description)
-      if (suffix) {
-        const existing = candidateMap.get(suffix);
-        if (existing) {
-          existing.text = existing.text ? existing.text + " " + value : value;
-        } else {
-          candidateMap.set(suffix, { name: suffix, text: value });
-        }
-      }
+    } else if (field === "candidate_name") {
+      candidateNames.push(value);
+    } else if (field === "candidate_profile") {
+      candidateProfiles.push(value);
     }
   }
 
-  // Convert candidate map to array, using the name from the key (properly cased)
+  // Pair names with profiles in order
   const candidates: CandidateInput[] = [];
-  for (const [key, val] of candidateMap) {
-    // Capitalize the name properly
-    const name = key.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  for (let i = 0; i < candidateNames.length; i++) {
+    const name = candidateNames[i];
+    const profile = candidateProfiles[i] || "";
     candidates.push({
       name,
       title: role ? `${role} Candidate` : "Candidate",
-      color: CANDIDATE_COLORS[candidates.length % CANDIDATE_COLORS.length],
-      referenceText: val.text,
+      color: CANDIDATE_COLORS[i % CANDIDATE_COLORS.length],
+      referenceText: profile,
     });
   }
 
@@ -79,7 +74,7 @@ function smartSplit(line: string): string[] {
   const result: string[] = [];
   let current = "";
   let inQuotes = false;
-  
+
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
     if (char === '"' || char === "'") {
