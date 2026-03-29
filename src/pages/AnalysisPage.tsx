@@ -9,7 +9,7 @@ import { RotateCcw, ArrowLeft, Settings } from "lucide-react";
 import {
   runForesightAgent,
   runProfileAgentCustom,
-  runTrajectoryAgent,
+  calculateTrajectory,
   runDecisionAgent,
 } from "@/lib/agents";
 import type {

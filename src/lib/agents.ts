@@ -1,7 +1,7 @@
 import type {
   Role, TimeHorizon, TransitionContext,
   CompetencyForecast, CandidateProfile, CandidateTrajectory, Recommendation,
-  CandidateInput, TeamPairing, AgentReasoning,
+  CandidateInput, TeamPairing, AgentReasoning, SkillProfile, TrajectoryPoint,
 } from "@/lib/types";
 import { CANDIDATES, COMPETENCIES } from "@/lib/types";
 import { supabase } from "@/integrations/supabase/client";
