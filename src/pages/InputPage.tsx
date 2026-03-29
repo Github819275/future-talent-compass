@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Loader2, ChevronDown, FileText, Plus, Trash2, Upload, HelpCircle, Settings } from "lucide-react";
-import bmwLogo from "@/assets/bmw-logo.png";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -14,6 +13,8 @@ import {
   type Role, type TimeHorizon, type TransitionContext, type CandidateInput,
 } from "@/lib/types";
 import { useCustomRoles } from "@/hooks/useCustomConfig";
+import bmwLogo from "@/assets/bmw-logo.png";
+import bmwHeroCar from "@/assets/bmw-hero-car.jpg";
 
 const InputPage = () => {
   const navigate = useNavigate();
@@ -90,35 +91,58 @@ const InputPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-teal/5" />
-        <div className="max-w-4xl mx-auto px-6 pt-20 pb-12 relative">
+      {/* BMW Hero with Car Background */}
+      <div className="relative overflow-hidden bg-foreground">
+        {/* Car background image */}
+        <div className="absolute inset-0">
+          <img
+            src={bmwHeroCar}
+            alt=""
+            className="w-full h-full object-cover opacity-40"
+            width={1920}
+            height={1080}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
+        </div>
+
+        {/* Header bar */}
+        <div className="relative z-10 max-w-6xl mx-auto px-6 pt-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={bmwLogo} alt="BMW" className="w-12 h-12" width={48} height={48} />
+            <div className="h-6 w-px bg-white/20" />
+            <span className="text-xs font-medium text-white/60 tracking-[0.2em] uppercase">Group</span>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => navigate("/dashboard")}
+            className="gap-2 text-xs px-5 py-4 border-white/20 text-white/80 hover:bg-white/10 hover:text-white bg-transparent"
+          >
+            <Settings className="w-3.5 h-3.5" /> Configuration
+          </Button>
+        </div>
+
+        {/* Hero content */}
+        <div className="relative z-10 max-w-4xl mx-auto px-6 pt-16 pb-20">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="text-center space-y-6"
+            transition={{ duration: 0.7 }}
+            className="space-y-6"
           >
-            <img src={bmwLogo} alt="BMW Group" className="w-20 h-20 mx-auto" width={80} height={80} />
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
-              <span className="text-sm font-medium text-primary">BMW Group Talent Intelligence</span>
-            </div>
-            <h1 className="text-5xl md:text-6xl font-display font-bold text-foreground tracking-tight">
-              Future<span className="text-gradient-blue">Proof</span>
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Strategic leadership evaluation for the BMW Group's next generation of leaders.
+            <p className="text-xs font-medium text-primary tracking-[0.3em] uppercase">
+              Talent Intelligence Platform
             </p>
-            <Button
-              variant="outline"
-              onClick={() => navigate("/dashboard")}
-              className="mt-6 gap-2 text-sm px-6 py-5 border-primary/30 text-primary hover:bg-primary/5"
-            >
-              <Settings className="w-4 h-4" /> Customize Roles & Evaluation Categories
-            </Button>
+            <h1 className="text-5xl md:text-6xl font-display font-bold text-white tracking-tight leading-[1.1]">
+              Future<span className="text-primary">Proof</span>
+            </h1>
+            <p className="text-lg text-white/60 max-w-xl leading-relaxed">
+              Strategic leadership evaluation for the BMW Group's next generation of leaders in the Neue Klasse era.
+            </p>
           </motion.div>
         </div>
+
+        {/* Bottom fade */}
+        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
       </div>
 
       {/* Form */}
@@ -126,7 +150,7 @@ const InputPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="max-w-4xl mx-auto px-6 pb-20 space-y-8"
+        className="max-w-4xl mx-auto px-6 pb-20 space-y-8 -mt-4"
       >
         {/* Company Situation */}
         <section className="glass-card p-6 space-y-3">
@@ -186,7 +210,7 @@ const InputPage = () => {
 
           <div className="space-y-4">
             {candidates.map((c, i) => (
-              <div key={i} className="border border-border/40 rounded-lg overflow-hidden bg-muted/20">
+              <div key={i} className="border border-border/40 rounded-sm overflow-hidden bg-muted/20">
                 <div className="flex items-center gap-3 p-4 border-b border-border/30">
                   <div
                     className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
@@ -222,10 +246,10 @@ const InputPage = () => {
             ))}
 
             <div className="flex gap-3">
-              <button onClick={addCandidate} className="flex-1 py-3 border border-dashed border-border/50 rounded-lg text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2">
+              <button onClick={addCandidate} className="flex-1 py-3 border border-dashed border-border/50 rounded-sm text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2">
                 <Plus className="w-4 h-4" /> Add Candidate
               </button>
-              <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-3 border border-dashed border-border/50 rounded-lg text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2">
+              <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-3 border border-dashed border-border/50 rounded-sm text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2">
                 <Upload className="w-4 h-4" /> Import CSV
               </button>
               <input ref={fileInputRef} type="file" accept=".csv" onChange={handleCsvImport} className="hidden" />
@@ -233,11 +257,10 @@ const InputPage = () => {
           </div>
         </section>
 
-
         {/* Run Button */}
         <div className="flex flex-col items-center gap-3 pt-4">
           {!canRun && (
-            <p className="text-xs text-amber-600 flex items-center gap-1.5">
+            <p className="text-xs text-destructive flex items-center gap-1.5">
               <HelpCircle className="w-3.5 h-3.5" />
               Each candidate needs a name and reference text to begin analysis.
             </p>
