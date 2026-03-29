@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Loader2, Zap, ChevronDown, FileText, Plus, Trash2, Upload, HelpCircle, Settings } from "lucide-react";
+import { ArrowRight, Loader2, ChevronDown, FileText, Plus, Trash2, Upload, HelpCircle, Settings } from "lucide-react";
+import bmwLogo from "@/assets/bmw-logo.png";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -99,15 +100,15 @@ const InputPage = () => {
             transition={{ duration: 0.6 }}
             className="text-center space-y-6"
           >
+            <img src={bmwLogo} alt="BMW Group" className="w-20 h-20 mx-auto" width={80} height={80} />
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
-              <Zap className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-primary">Multi-Agent Decision Intelligence</span>
+              <span className="text-sm font-medium text-primary">BMW Group Talent Intelligence</span>
             </div>
             <h1 className="text-5xl md:text-6xl font-display font-bold text-foreground tracking-tight">
               Future<span className="text-gradient-blue">Proof</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Hire for the leader your organisation will need — not just the one it needs today.
+              Strategic leadership evaluation for the BMW Group's next generation of leaders.
             </p>
             <Button
               variant="outline"
@@ -247,7 +248,7 @@ const InputPage = () => {
             size="lg"
             className="gap-3 font-display text-lg px-12 py-7 glow-blue"
           >
-            Run FutureProof Analysis <ArrowRight className="w-5 h-5" />
+            Run BMW FutureProof Analysis <ArrowRight className="w-5 h-5" />
           </Button>
         </div>
       </motion.div>

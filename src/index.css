@@ -2,54 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 220 25% 12%;
+    --background: 0 0% 98%;
+    --foreground: 210 11% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 12%;
+    --card-foreground: 210 11% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 12%;
+    --popover-foreground: 210 11% 15%;
 
-    --primary: 221 83% 53%;
+    --primary: 214 100% 35%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 92%;
-    --secondary-foreground: 220 25% 20%;
+    --secondary: 210 10% 93%;
+    --secondary-foreground: 210 11% 20%;
 
-    --muted: 220 14% 95%;
-    --muted-foreground: 220 10% 46%;
+    --muted: 210 10% 95%;
+    --muted-foreground: 210 8% 46%;
 
-    --accent: 220 14% 93%;
-    --accent-foreground: 220 25% 12%;
+    --accent: 210 10% 94%;
+    --accent-foreground: 210 11% 15%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 88%;
-    --input: 220 13% 88%;
-    --ring: 221 83% 53%;
+    --border: 210 10% 88%;
+    --input: 210 10% 88%;
+    --ring: 214 100% 35%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    --teal: 168 76% 36%;
+    --teal: 210 11% 25%;
     --teal-foreground: 0 0% 100%;
-    --amber: 32 95% 44%;
+    --amber: 210 8% 46%;
     --amber-foreground: 0 0% 100%;
     --danger: 0 84% 55%;
 
-    --sidebar-background: 220 20% 97%;
-    --sidebar-foreground: 220 25% 12%;
-    --sidebar-primary: 221 83% 53%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 210 11% 15%;
+    --sidebar-primary: 214 100% 35%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 93%;
-    --sidebar-accent-foreground: 220 25% 12%;
-    --sidebar-border: 220 13% 88%;
-    --sidebar-ring: 221 83% 53%;
+    --sidebar-accent: 210 10% 94%;
+    --sidebar-accent-foreground: 210 11% 15%;
+    --sidebar-border: 210 10% 88%;
+    --sidebar-ring: 214 100% 35%;
   }
 }
 
@@ -63,30 +63,30 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Space Grotesk', sans-serif;
+    font-family: 'DM Sans', sans-serif;
   }
 }
 
 @layer utilities {
   .glass-card {
-    @apply bg-card border border-border rounded-xl shadow-sm;
+    @apply bg-card border border-border rounded-lg shadow-sm;
   }
 
   .glow-blue {
-    box-shadow: 0 4px 14px hsl(221 83% 53% / 0.15), 0 1px 3px hsl(221 83% 53% / 0.08);
+    box-shadow: 0 4px 20px hsl(214 100% 35% / 0.2), 0 1px 3px hsl(214 100% 35% / 0.1);
   }
 
   .glow-teal {
-    box-shadow: 0 4px 14px hsl(168 76% 36% / 0.12);
+    box-shadow: 0 4px 14px hsl(210 11% 25% / 0.12);
   }
 
   .text-gradient-blue {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-[hsl(221,83%,53%)] to-[hsl(200,90%,50%)];
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[hsl(214,100%,35%)] to-[hsl(214,80%,50%)];
   }
 
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: hsl(220 13% 85%) transparent;
+    scrollbar-color: hsl(210 10% 82%) transparent;
   }
   .scrollbar-thin::-webkit-scrollbar {
     width: 5px;
@@ -95,7 +95,7 @@
     background: transparent;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: hsl(220 13% 82%);
+    background: hsl(210 10% 80%);
     border-radius: 3px;
   }
 }
