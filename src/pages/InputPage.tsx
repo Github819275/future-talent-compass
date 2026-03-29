@@ -1,24 +1,25 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Loader2, ChevronDown, FileText, Plus, Trash2, Upload, HelpCircle, Settings } from "lucide-react";
+import { ArrowRight, Plus, Trash2, Upload, HelpCircle, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { useRef } from "react";
 import {
   CANDIDATE_COLORS, DEFAULT_CANDIDATES,
   type Role, type TimeHorizon, type TransitionContext, type CandidateInput,
 } from "@/lib/types";
+import { parseConfigCsv } from "@/lib/csvConfigParser";
 import { useCustomRoles } from "@/hooks/useCustomConfig";
 import bmwLogo from "@/assets/bmw-logo.png";
 import bmwHeroCar from "@/assets/bmw-hero-car.jpg";
 
 const InputPage = () => {
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const configFileRef = useRef<HTMLInputElement>(null);
   const { data: roles = [] } = useCustomRoles();
 
   const [companySituation, setCompanySituation] = useState(
@@ -27,6 +28,7 @@ const InputPage = () => {
   const [role, setRole] = useState<Role>("Chief Executive Officer");
   const [timeHorizon, setTimeHorizon] = useState<TimeHorizon>(5);
   const [candidates, setCandidates] = useState<CandidateInput[]>(DEFAULT_CANDIDATES);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   const canRun = candidates.length >= 2 && candidates.every(c => c.name.trim() && c.referenceText.trim().length > 20);
 
@@ -59,49 +61,47 @@ const InputPage = () => {
     setCandidates(candidates.filter((_, i) => i !== index));
   };
 
-  const handleCsvImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleConfigUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
         const text = ev.target?.result as string;
-        const lines = text.split(/\r?\n/).filter(l => l.trim());
-        if (lines.length < 2) { toast.error("CSV needs a header and data rows."); return; }
-        const header = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/['"]/g, ""));
-        const nameIdx = header.findIndex(h => h === "name");
-        const textIdx = header.findIndex(h => h.includes("reference") || h.includes("text") || h.includes("cv") || h.includes("notes") || h.includes("description"));
-        if (nameIdx === -1 || textIdx === -1) { toast.error("CSV needs 'name' and 'referenceText' columns."); return; }
-        const imported: CandidateInput[] = [];
-        for (let i = 1; i < lines.length; i++) {
-          const cols = lines[i].split(",");
-          const name = cols[nameIdx]?.replace(/^["']|["']$/g, "").trim();
-          const refText = cols[textIdx]?.replace(/^["']|["']$/g, "").trim();
-          if (!name || !refText) continue;
-          imported.push({ name, title: "CEO Candidate", color: CANDIDATE_COLORS[imported.length % CANDIDATE_COLORS.length], referenceText: refText });
+        const config = parseConfigCsv(text);
+
+        if (config.situation) setCompanySituation(config.situation);
+        if (config.role) {
+          // Try to match to existing roles, otherwise use as-is
+          const matchedRole = roles.find(r => r.toLowerCase().includes(config.role.toLowerCase()));
+          if (matchedRole) setRole(matchedRole as Role);
         }
-        if (imported.length === 0) { toast.error("No valid candidates in CSV."); return; }
-        setCandidates(imported);
-        toast.success(`Imported ${imported.length} candidate${imported.length > 1 ? "s" : ""}`);
-      } catch { toast.error("Failed to parse CSV."); }
+        if (config.timeHorizon) {
+          const th = config.timeHorizon;
+          if (th === 1 || th === 3 || th === 5) setTimeHorizon(th);
+          else if (th <= 2) setTimeHorizon(1);
+          else if (th <= 4) setTimeHorizon(3);
+          else setTimeHorizon(5);
+        }
+        if (config.candidates.length >= 2) {
+          setCandidates(config.candidates);
+        }
+        setConfigLoaded(true);
+        toast.success(`Configuration loaded — ${config.candidates.length} candidates, ${config.evaluationCategories.length} evaluation categories`);
+      } catch (err: any) {
+        toast.error(err.message || "Failed to parse configuration CSV.");
+      }
     };
     reader.readAsText(file);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (configFileRef.current) configFileRef.current.value = "";
   };
 
   return (
     <div className="min-h-screen bg-background">
       {/* BMW Hero with Car Background */}
       <div className="relative overflow-hidden bg-foreground">
-        {/* Car background image */}
         <div className="absolute inset-0">
-          <img
-            src={bmwHeroCar}
-            alt=""
-            className="w-full h-full object-cover opacity-40"
-            width={1920}
-            height={1080}
-          />
+          <img src={bmwHeroCar} alt="" className="w-full h-full object-cover opacity-40" width={1920} height={1080} />
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
         </div>
 
@@ -123,35 +123,61 @@ const InputPage = () => {
 
         {/* Hero content */}
         <div className="relative z-10 max-w-4xl mx-auto px-6 pt-16 pb-20">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-            className="space-y-6"
-          >
-            <p className="text-xs font-medium text-primary tracking-[0.3em] uppercase">
-              Talent Intelligence Platform
-            </p>
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="space-y-6">
+            <p className="text-xs font-medium text-primary tracking-[0.3em] uppercase">Talent Intelligence Platform</p>
             <h1 className="text-5xl md:text-6xl font-display font-bold text-white tracking-tight leading-[1.1]">
               Future<span className="text-primary">Proof</span>
             </h1>
             <p className="text-lg text-white/60 max-w-xl leading-relaxed">
               Strategic leadership evaluation for the BMW Group's next generation of leaders in the Neue Klasse era.
             </p>
+
+            {/* Upload Configuration CSV — prominent hero CTA */}
+            <div className="flex items-center gap-3 pt-2">
+              <Button
+                onClick={() => configFileRef.current?.click()}
+                size="lg"
+                variant={configLoaded ? "outline" : "default"}
+                className={`gap-3 font-display text-base px-8 py-6 ${configLoaded ? "border-primary/40 text-primary hover:bg-primary/10" : "glow-blue"}`}
+              >
+                <Upload className="w-5 h-5" />
+                {configLoaded ? "Re-upload Configuration" : "Upload Configuration CSV"}
+              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="w-7 h-7 rounded-full bg-white/10 border border-white/20 flex items-center justify-center hover:bg-white/20 transition-colors">
+                      <HelpCircle className="w-4 h-4 text-white/60" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs text-xs leading-relaxed p-3">
+                    <p className="font-semibold mb-1">Configuration CSV Format</p>
+                    <p className="text-muted-foreground mb-2">Upload a CSV with <strong>field</strong> and <strong>value</strong> columns:</p>
+                    <ul className="space-y-0.5 text-muted-foreground list-disc pl-3">
+                      <li><strong>situation</strong> — Company context</li>
+                      <li><strong>role</strong> — Role being hired</li>
+                      <li><strong>strategic_horizon</strong> — Years (1, 3, or 5)</li>
+                      <li><strong>evaluation_*</strong> — Evaluation categories</li>
+                      <li><strong>candidate_Name</strong> — Candidate info</li>
+                    </ul>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <input ref={configFileRef} type="file" accept=".csv" onChange={handleConfigUpload} className="hidden" />
+            </div>
+            {configLoaded && (
+              <p className="text-xs text-primary/80 flex items-center gap-1.5">
+                ✓ Configuration loaded — review and edit below before running analysis.
+              </p>
+            )}
           </motion.div>
         </div>
 
-        {/* Bottom fade */}
         <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent" />
       </div>
 
       {/* Form */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="max-w-4xl mx-auto px-6 pb-20 space-y-8 -mt-4"
-      >
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="max-w-4xl mx-auto px-6 pb-20 space-y-8 -mt-4">
         {/* Company Situation */}
         <section className="glass-card p-6 space-y-3">
           <div className="flex items-center gap-3">
@@ -176,9 +202,7 @@ const InputPage = () => {
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">Role Being Hired</label>
               <Select value={role} onValueChange={v => setRole(v as Role)}>
-                <SelectTrigger className="bg-muted/50 border-border">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="bg-muted/50 border-border"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {roles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
@@ -187,9 +211,7 @@ const InputPage = () => {
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">Strategic Horizon</label>
               <Select value={String(timeHorizon)} onValueChange={v => setTimeHorizon(Number(v) as TimeHorizon)}>
-                <SelectTrigger className="bg-muted/50 border-border">
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger className="bg-muted/50 border-border"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="1">1 Year — Short Term</SelectItem>
                   <SelectItem value="3">3 Years — Medium Term</SelectItem>
@@ -245,15 +267,9 @@ const InputPage = () => {
               </div>
             ))}
 
-            <div className="flex gap-3">
-              <button onClick={addCandidate} className="flex-1 py-3 border border-dashed border-border/50 rounded-sm text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2">
-                <Plus className="w-4 h-4" /> Add Candidate
-              </button>
-              <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-3 border border-dashed border-border/50 rounded-sm text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2">
-                <Upload className="w-4 h-4" /> Import CSV
-              </button>
-              <input ref={fileInputRef} type="file" accept=".csv" onChange={handleCsvImport} className="hidden" />
-            </div>
+            <button onClick={addCandidate} className="w-full py-3 border border-dashed border-border/50 rounded-sm text-xs text-muted-foreground hover:text-primary hover:border-primary/30 transition-colors flex items-center justify-center gap-2">
+              <Plus className="w-4 h-4" /> Add Candidate
+            </button>
           </div>
         </section>
 
@@ -265,12 +281,7 @@ const InputPage = () => {
               Each candidate needs a name and reference text to begin analysis.
             </p>
           )}
-          <Button
-            onClick={handleRun}
-            disabled={!canRun}
-            size="lg"
-            className="gap-3 font-display text-lg px-12 py-7 glow-blue"
-          >
+          <Button onClick={handleRun} disabled={!canRun} size="lg" className="gap-3 font-display text-lg px-12 py-7 glow-blue">
             Run BMW FutureProof Analysis <ArrowRight className="w-5 h-5" />
           </Button>
         </div>
