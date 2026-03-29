@@ -39,7 +39,7 @@ const AnalysisPage = () => {
       foresight: "idle",
       profile: "idle",
       trajectory: "idle",
-      risk: "idle",
+      
       decision: "idle",
     },
   });
@@ -85,13 +85,7 @@ const AnalysisPage = () => {
       setState(prev => ({ ...prev, trajectories }));
       updateStatus("trajectory", "complete");
 
-      // Step 4: Risk Agent
-      updateStatus("risk", "active");
-      await delay(1500);
-      setState(prev => ({ ...prev, phase: 4 }));
-      updateStatus("risk", "complete");
-
-      // Step 5: Decision Agent
+      // Step 4: Decision Agent
       updateStatus("decision", "active");
       await delay(1500);
       const decision = await runDecisionAgent(trajectories, profiles, forecasts, timeHorizon);
@@ -116,7 +110,6 @@ const AnalysisPage = () => {
       updateStatus("foresight", "error");
       updateStatus("profile", "error");
       updateStatus("trajectory", "error");
-      updateStatus("risk", "error");
       updateStatus("decision", "error");
     } finally {
       setIsRunning(false);
