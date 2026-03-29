@@ -16,9 +16,9 @@ const AppHeader = ({ right }: Props) => {
           onClick={() => navigate("/")}
           className="flex items-center gap-3 hover:opacity-80 transition-opacity"
         >
-          <img src={bmwLogo} alt="BMW" className="w-9 h-9" width={36} height={36} />
+          <img src={bmwLogo} alt="BMW" className="w-9 h-9 object-contain mix-blend-lighten" width={36} height={36} />
           <div className="h-5 w-px bg-white/20" />
-          <span className="text-xs font-medium text-white/70 tracking-widest uppercase">Talent Intelligence</span>
+          <span className="text-xs font-medium text-white/70 tracking-widest uppercase">Senior Hiring</span>
         </button>
         {right}
       </div>

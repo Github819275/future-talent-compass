@@ -108,9 +108,9 @@ const InputPage = () => {
         {/* Header bar */}
         <div className="relative z-10 max-w-6xl mx-auto px-6 pt-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={bmwLogo} alt="BMW" className="w-12 h-12" width={48} height={48} />
+            <img src={bmwLogo} alt="BMW" className="w-12 h-12 object-contain mix-blend-lighten" width={48} height={48} />
             <div className="h-6 w-px bg-white/20" />
-            <span className="text-xs font-medium text-white/60 tracking-[0.2em] uppercase">Group</span>
+            <span className="text-xs font-medium text-white/60 tracking-[0.2em] uppercase">Senior Hiring</span>
           </div>
           <Button
             variant="outline"
